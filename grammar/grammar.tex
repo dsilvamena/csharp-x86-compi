@@ -1,16 +1,26 @@
 % Gramatica de csharp-x86-compi
-% Para regenerar grammar/grammar.svg ejecuta:  bash grammar/build.sh
+% Se generan dos variantes (tema claro y oscuro) para el <picture> del README.
+% Para regenerar ambas ejecuta:  bash grammar/build.sh
 \documentclass[border=16pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{array}
 \usepackage{xcolor}
 
-% No-terminales, terminales y clases lexicas
-\definecolor{ntcolor}{HTML}{1f2937}   % gris azulado oscuro
-\definecolor{tcolor}{HTML}{b91c1c}    % rojo para terminales
-\definecolor{tokcolor}{HTML}{2563eb}  % azul para tokens lexicos
-\definecolor{metacolor}{HTML}{6b7280} % gris para metasimbolos
+% Paleta segun el tema. build.sh compila la variante oscura definiendo
+% \darktheme en la linea de comandos; sin ese flag se usa el tema claro.
+% No-terminales, terminales y clases lexicas.
+\ifdefined\darktheme
+  \definecolor{ntcolor}{HTML}{d1d9e0}   % gris claro (casi blanco)
+  \definecolor{tcolor}{HTML}{ff7b72}    % rojo claro para terminales
+  \definecolor{tokcolor}{HTML}{79c0ff}  % azul claro para tokens lexicos
+  \definecolor{metacolor}{HTML}{8b949e} % gris apagado para metasimbolos
+\else
+  \definecolor{ntcolor}{HTML}{1f2937}   % gris azulado oscuro
+  \definecolor{tcolor}{HTML}{b91c1c}    % rojo para terminales
+  \definecolor{tokcolor}{HTML}{2563eb}  % azul para tokens lexicos
+  \definecolor{metacolor}{HTML}{6b7280} % gris para metasimbolos
+\fi
 
 \newcommand{\N}[1]{{\color{ntcolor}\itshape #1}}          % no-terminal
 \newcommand{\T}[1]{{\color{tcolor}\ttfamily #1}}          % terminal literal

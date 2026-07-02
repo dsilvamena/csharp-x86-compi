@@ -204,5 +204,8 @@ el binario Linux producido por el helper de Docker.
 ## Gramática
 
 <p align="center">
-  <img src="grammar/grammar.svg" alt="Gramática de csharp-x86-compi" width="620">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="grammar/grammar-dark.svg">
+    <img src="grammar/grammar-light.svg" alt="Gramática de csharp-x86-compi" width="620">
+  </picture>
 </p>
