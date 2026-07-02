@@ -1,0 +1,103 @@
+% Gramatica de csharp-x86-compi
+% Para regenerar grammar/grammar.svg ejecuta:  bash grammar/build.sh
+\documentclass[border=16pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{array}
+\usepackage{xcolor}
+
+% No-terminales, terminales y clases lexicas
+\definecolor{ntcolor}{HTML}{1f2937}   % gris azulado oscuro
+\definecolor{tcolor}{HTML}{b91c1c}    % rojo para terminales
+\definecolor{tokcolor}{HTML}{2563eb}  % azul para tokens lexicos
+\definecolor{metacolor}{HTML}{6b7280} % gris para metasimbolos
+
+\newcommand{\N}[1]{{\color{ntcolor}\itshape #1}}          % no-terminal
+\newcommand{\T}[1]{{\color{tcolor}\ttfamily #1}}          % terminal literal
+\newcommand{\Tok}[1]{{\color{tokcolor}\ttfamily\itshape #1}} % token lexico
+\newcommand{\M}[1]{{\color{metacolor} #1}}                % metasimbolo
+\newcommand{\Def}{\M{::=}}
+\newcommand{\Or}{\M{$\mid$}}
+\newcommand{\eps}{$\varepsilon$}
+
+\setlength{\extrarowheight}{2.5pt}
+
+\begin{document}
+\begin{tabular}{@{}r@{\hspace{1em}}c@{\hspace{0.7em}}l@{}}
+
+\N{Program}        & \Def & \M{(}\N{StructDecl} \Or \N{ClassDecl}\M{)+} \\[6pt]
+
+\N{StructDecl}     & \Def & \T{struct} \Tok{id} \T{\{} \N{FieldDecl}\M{*} \T{\}} \\[6pt]
+
+\N{FieldDecl}      & \Def & \N{Type} \Tok{id} \T{;} \\[6pt]
+
+\N{ClassDecl}      & \Def & \T{class} \Tok{id} \T{\{} \N{MethodDecl}\M{*} \T{\}} \\[6pt]
+
+\N{MethodDecl}     & \Def & \M{[}\T{static}\M{]} \N{Type} \Tok{id} \T{(} \N{Params} \T{)} \N{Block} \\[6pt]
+
+\N{Params}         & \Def & \eps \\
+                   & \Or  & \N{Param} \M{(}\T{,} \N{Param}\M{)*} \\[6pt]
+
+\N{Param}          & \Def & \N{Type} \Tok{id} \\[6pt]
+
+\N{Type}           & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \T{void} \Or \Tok{id} \\
+                   & \Or  & \N{Type} \T{[]} \Or \N{Type} \T{[,]} \\[6pt]
+
+\N{VarType}        & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \Tok{id} \\
+                   & \Or  & \N{VarType} \T{[]} \Or \N{VarType} \T{[,]} \\[6pt]
+
+\N{Block}          & \Def & \T{\{} \N{Stm}\M{*} \T{\}} \\[6pt]
+
+\N{Stm}            & \Def & \N{VarDec} \T{;} \Or \N{SimpleStm} \T{;} \Or \N{PrintStm} \\
+                   & \Or  & \N{IfStm} \Or \N{WhileStm} \Or \N{ForStm} \\
+                   & \Or  & \N{DoWhileStm} \Or \N{ReturnStm} \Or \N{BreakStm} \Or \N{Block} \\[6pt]
+
+\N{VarDec}         & \Def & \N{VarType} \Tok{id} \M{[}\T{=} \N{Expr}\M{]} \\[6pt]
+
+\N{SimpleStm}      & \Def & \N{Expr} \M{[}\T{=} \N{Expr}\M{]} \\[6pt]
+
+\N{PrintStm}       & \Def & \T{Console} \T{.} \M{(}\T{WriteLine} \Or \T{Write}\M{)} \T{(} \N{Expr} \T{)} \T{;} \\[6pt]
+
+\N{IfStm}          & \Def & \T{if} \T{(} \N{Expr} \T{)} \N{Block} \M{[}\T{else} \M{(}\N{Block} \Or \N{IfStm}\M{)]} \\[6pt]
+
+\N{WhileStm}       & \Def & \T{while} \T{(} \N{Expr} \T{)} \N{Block} \\[6pt]
+
+\N{ForStm}         & \Def & \T{for} \T{(} \M{[}\N{ForInit}\M{]} \T{;} \M{[}\N{Expr}\M{]} \T{;} \M{[}\N{SimpleStm}\M{]} \T{)} \N{Block} \\[6pt]
+
+\N{ForInit}        & \Def & \N{VarDec} \Or \N{SimpleStm} \\[6pt]
+
+\N{DoWhileStm}     & \Def & \T{do} \N{Block} \T{while} \T{(} \N{Expr} \T{)} \T{;} \\[6pt]
+
+\N{ReturnStm}      & \Def & \T{return} \M{[}\N{Expr}\M{]} \T{;} \\[6pt]
+
+\N{BreakStm}       & \Def & \T{break} \T{;} \\[6pt]
+
+\N{Expr}           & \Def & \N{LogicalOr} \\[6pt]
+
+\N{LogicalOr}      & \Def & \N{LogicalAnd} \M{(}\T{||} \N{LogicalAnd}\M{)*} \\[6pt]
+
+\N{LogicalAnd}     & \Def & \N{Equality} \M{(}\T{\&\&} \N{Equality}\M{)*} \\[6pt]
+
+\N{Equality}       & \Def & \N{Relational} \M{(}\M{(}\T{==} \Or \T{!=}\M{)} \N{Relational}\M{)*} \\[6pt]
+
+\N{Relational}     & \Def & \N{Additive} \M{(}\M{(}\T{<} \Or \T{>} \Or \T{<=} \Or \T{>=}\M{)} \N{Additive}\M{)*} \\[6pt]
+
+\N{Additive}       & \Def & \N{Multiplicative} \M{(}\M{(}\T{+} \Or \T{-}\M{)} \N{Multiplicative}\M{)*} \\[6pt]
+
+\N{Multiplicative} & \Def & \N{Unary} \M{(}\M{(}\T{*} \Or \T{/} \Or \T{\%}\M{)} \N{Unary}\M{)*} \\[6pt]
+
+\N{Unary}          & \Def & \M{(}\T{-} \Or \T{!}\M{)} \N{Unary} \\
+                   & \Or  & \T{(} \N{Type} \T{)} \N{Unary} \\
+                   & \Or  & \N{Primary} \\[6pt]
+
+\N{Primary}        & \Def & \Tok{num} \Or \Tok{charlit} \Or \Tok{stringlit} \Or \T{true} \Or \T{false} \\
+                   & \Or  & \T{new} \N{Type} \T{[} \N{Expr} \T{]} \\
+                   & \Or  & \T{new} \N{Type} \T{[} \N{Expr} \T{,} \N{Expr} \T{]} \\
+                   & \Or  & \Tok{id} \Or \Tok{id} \T{(} \N{Args} \T{)} \Or \Tok{id} \T{.} \Tok{id} \\
+                   & \Or  & \Tok{id} \T{[} \N{Expr} \T{]} \Or \Tok{id} \T{[} \N{Expr} \T{,} \N{Expr} \T{]} \\
+                   & \Or  & \T{(} \N{Expr} \T{)} \\[6pt]
+
+\N{Args}           & \Def & \eps \Or \N{Expr} \M{(}\T{,} \N{Expr}\M{)*} \\
+
+\end{tabular}
+\end{document}
