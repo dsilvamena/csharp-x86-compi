@@ -19,8 +19,13 @@ run-all: compile-all
 	docker run --rm --platform linux/amd64 -v "$(PWD)/outputs:/w" gcc:13 bash -c \
 	  'cd /w && for s in *.s; do b=$${s%.s}; g++ -no-pie $$s -o $$b && echo "== $$b ==" && ./$$b; done'
 
+# Suite de pruebas: compila, ensambla, ejecuta y compara contra tests/expected/.
+# En Linux corre directo; en macOS usa: scripts/docker.sh test
+test: $(BIN)
+	bash scripts/run_tests.sh
+
 clean:
 	rm -f $(BIN)
 	rm -rf outputs
 
-.PHONY: run compile-all run-all clean
+.PHONY: run compile-all run-all test clean

@@ -51,6 +51,36 @@ make run-all       # además ensambla y ejecuta cada .s en Docker (gcc:13)
 make clean         # borra el binario y outputs/
 ```
 
+## Pruebas
+
+La suite (`scripts/run_tests.sh`) recorre `inputs/*.cs`:
+
+- Para cada programa válido lo compila con `--opt` y con `--no-opt`, ensambla con
+  `g++ -no-pie`, lo ejecuta y compara su salida con `tests/expected/<name>.txt`.
+  Exige además que `--opt` y `--no-opt` produzcan **la misma** salida.
+- Para cada `inputs/err_*.cs` exige que la compilación **falle** con la fase
+  esperada (léxico / sintáctico / semántico), deducida del nombre del archivo.
+
+Las salidas de referencia viven en `tests/expected/` (versionadas) y **no** en
+`outputs/`, para que sobrevivan a `make clean` (que borra `outputs/`).
+
+En **Linux**:
+
+```bash
+make test                  # compila y corre la suite
+```
+
+En **macOS** (el `.s` es Linux ELF, no corre nativo), vía Docker (gcc:13):
+
+```bash
+scripts/docker.sh test     # reconstruye dentro del contenedor + suite completa
+scripts/docker.sh gen      # regenera tests/expected/ (solo si el cambio es intencional)
+scripts/docker.sh run inputs/07_cast.cs   # compila, linka y ejecuta un programa
+```
+
+Regenera `tests/expected/` con `gen` únicamente cuando un cambio de salida sea
+intencional, y revisa el diff.
+
 ## Gramatica del compilador
 
 ```bnf
