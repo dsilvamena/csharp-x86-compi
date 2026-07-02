@@ -31,6 +31,7 @@ int BinaryExp::accept(Visitor *v) { return v->visit(this); }
 int UnaryExp::accept(Visitor *v) { return v->visit(this); }
 int CallExp::accept(Visitor *v) { return v->visit(this); }
 int FieldExp::accept(Visitor *v) { return v->visit(this); }
+int CastExp::accept(Visitor *v) { return v->visit(this); }
 int NewArrayExp::accept(Visitor *v) { return v->visit(this); }
 int ArrayAccessExp::accept(Visitor *v) { return v->visit(this); }
 int NewMatrixExp::accept(Visitor *v) { return v->visit(this); }
@@ -81,6 +82,9 @@ public:
       depth--;
     } else if (auto f = dynamic_cast<FieldExp *>(e)) {
       line("FieldExp " + f->object + "." + f->field);
+    } else if (auto ca = dynamic_cast<CastExp *>(e)) {
+      line("CastExp (" + ca->targetType + ")");
+      depth++; exp(ca->operand); depth--;
     } else if (auto n = dynamic_cast<NewArrayExp *>(e)) {
       line("NewArrayExp " + n->elemType + "[]");
       depth++; exp(n->size); depth--;

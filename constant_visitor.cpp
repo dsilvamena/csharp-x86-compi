@@ -54,6 +54,17 @@ int ConstantVisitor::visit(UnaryExp *e) {
 
 int ConstantVisitor::visit(CallExp *e) { for (auto a : e->args) a->accept(this); return 0; }
 int ConstantVisitor::visit(FieldExp *e) { e->isConstant = false; return 0; }
+
+int ConstantVisitor::visit(CastExp *e) {
+  e->operand->accept(this);
+  e->isConstant = false;
+  if (!e->operand->isConstant) return 0;
+  long v = e->operand->constantValue;
+  e->constantValue = (e->targetType == "char") ? (v & 0xFF) : v;  // (int): identidad
+  e->isConstant = true;
+  folded++;
+  return 0;
+}
 int ConstantVisitor::visit(NewArrayExp *e) { e->size->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(ArrayAccessExp *e) { e->index->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(NewMatrixExp *e) { e->rows->accept(this); e->cols->accept(this); e->isConstant = false; return 0; }

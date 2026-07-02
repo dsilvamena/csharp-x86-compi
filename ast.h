@@ -99,6 +99,16 @@ public:
   int accept(Visitor *v) override;
 };
 
+// Cast explícito: (T)operando.  Soporta conversiones numéricas int/char.
+class CastExp : public Exp {
+public:
+  std::string targetType;
+  Exp *operand;
+  CastExp(std::string t, Exp *e) : targetType(std::move(t)), operand(e) {}
+  int accept(Visitor *v) override;
+  ~CastExp() override { delete operand; }
+};
+
 class NewArrayExp : public Exp {
 public:
   std::string elemType;

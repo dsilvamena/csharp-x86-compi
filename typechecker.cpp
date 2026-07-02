@@ -127,6 +127,17 @@ int TypeCheckerVisitor::visit(FieldExp *e) {
   return 0;
 }
 
+int TypeCheckerVisitor::visit(CastExp *e) {
+  std::string ot = typeOf(e->operand);
+  // Solo conversiones numéricas explícitas (int/char). Documentado.
+  if ((e->targetType == "int" || e->targetType == "char") && isNumeric(ot)) {
+    e->inferredType = lastType = e->targetType;
+    return 0;
+  }
+  throw CompileError("semantico", "cast no soportado: (" + e->targetType + ") desde " + ot +
+                     " (solo int/char numericos)", e->line, e->col);
+}
+
 int TypeCheckerVisitor::visit(NewArrayExp *e) {
   if (!isType(e->elemType) || e->elemType == "void")
     throw CompileError("semantico", "tipo de elemento invalido en 'new': '" + e->elemType + "'",

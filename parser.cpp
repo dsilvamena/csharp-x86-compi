@@ -392,6 +392,21 @@ Exp *Parser::parseMultiplicative() {
 }
 
 Exp *Parser::parseUnary() {
+  // Cast explícito: '(' Tipo ')' Unary.  Se distingue de un paréntesis de
+  // agrupación porque tras '(' viene un token de tipo primitivo (lookahead).
+  if (check(Token::LPAREN)) {
+    Token::Type nt = peek().type;
+    if (nt == Token::INT || nt == Token::CHAR || nt == Token::BOOL || nt == Token::STRING) {
+      int L = current.line, C = current.col;
+      advance();  // (
+      std::string t = parseType();
+      expect(Token::RPAREN, "se esperaba ')' tras el tipo del cast");
+      Exp *operand = parseUnary();
+      CastExp *c = new CastExp(t, operand);
+      c->line = L; c->col = C;
+      return c;
+    }
+  }
   if (check(Token::MINUS) || check(Token::NOT)) {
     UnaryOp op = check(Token::MINUS) ? NEG_OP : NOT_OP;
     int L = current.line, C = current.col;

@@ -58,6 +58,8 @@ void collectExp(Exp *e, std::vector<std::string> &lits) {
     collectExp(u->operand, lits);
   } else if (auto c = dynamic_cast<CallExp *>(e)) {
     for (auto a : c->args) collectExp(a, lits);
+  } else if (auto ca = dynamic_cast<CastExp *>(e)) {
+    collectExp(ca->operand, lits);
   } else if (auto na = dynamic_cast<NewArrayExp *>(e)) {
     collectExp(na->size, lits);
   } else if (auto aa = dynamic_cast<ArrayAccessExp *>(e)) {
@@ -192,6 +194,18 @@ int GenCodeVisitor::visit(FieldExp *e) {
   int idx = structFieldIndex[varType[e->object]][e->field];
   code << "  movq " << varOffset[e->object] << "(%rbp), %rax\n";
   code << "  movq " << (idx * 8) << "(%rax), %rax\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(CastExp *e) {
+  if (optimize && e->isConstant) {
+    code << "  movq $" << e->constantValue << ", %rax\n";
+    return 0;
+  }
+  e->operand->accept(this);
+  // (char): truncar al byte bajo (0..255). (int): el valor ya es de 64 bits.
+  if (e->targetType == "char")
+    code << "  movzbq %al, %rax\n";
   return 0;
 }
 

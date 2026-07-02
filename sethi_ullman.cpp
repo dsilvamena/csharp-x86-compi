@@ -20,6 +20,7 @@ int SethiUllmanVisitor::visit(BinaryExp *e) {
 int SethiUllmanVisitor::visit(UnaryExp *e) { e->operand->accept(this); e->label = e->operand->label; return 0; }
 int SethiUllmanVisitor::visit(CallExp *e) { for (auto a : e->args) a->accept(this); e->label = 1; return 0; }
 int SethiUllmanVisitor::visit(FieldExp *e) { e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(CastExp *e) { e->operand->accept(this); e->label = e->operand->label; return 0; }
 int SethiUllmanVisitor::visit(NewArrayExp *e) { e->size->accept(this); e->label = 1; return 0; }
 int SethiUllmanVisitor::visit(ArrayAccessExp *e) { e->index->accept(this); e->label = 1; return 0; }
 int SethiUllmanVisitor::visit(NewMatrixExp *e) { e->rows->accept(this); e->cols->accept(this); e->label = 1; return 0; }

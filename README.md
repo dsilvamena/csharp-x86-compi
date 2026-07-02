@@ -84,6 +84,7 @@ Additive       ::= Multiplicative (("+" | "-") Multiplicative)*
 Multiplicative ::= Unary (("*" | "/" | "%") Unary)*
 
 Unary          ::= ("-" | "!") Unary
+                 | "(" Type ")" Unary
                  | Primary
 
 Primary        ::= num

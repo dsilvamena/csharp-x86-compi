@@ -10,7 +10,7 @@
 #include <vector>
 
 class NumberExp; class BoolExp; class CharExp; class StringExp; class IdExp;
-class BinaryExp; class UnaryExp; class CallExp; class FieldExp;
+class BinaryExp; class UnaryExp; class CallExp; class FieldExp; class CastExp;
 class NewArrayExp; class ArrayAccessExp; class NewMatrixExp; class MatrixAccessExp;
 class Block; class VarDecStm; class AssignStm; class ExprStm; class PrintStm;
 class IfStm; class WhileStm; class DoWhileStm; class ForStm; class ReturnStm;
@@ -28,6 +28,7 @@ public:
   virtual int visit(UnaryExp *e) = 0;
   virtual int visit(CallExp *e) = 0;
   virtual int visit(FieldExp *e) = 0;
+  virtual int visit(CastExp *e) = 0;
   virtual int visit(NewArrayExp *e) = 0;
   virtual int visit(ArrayAccessExp *e) = 0;
   virtual int visit(NewMatrixExp *e) = 0;
@@ -72,6 +73,7 @@ public:
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
+  int visit(CastExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -107,6 +109,7 @@ public:
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
+  int visit(CastExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -141,6 +144,7 @@ public:
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
+  int visit(CastExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -202,6 +206,7 @@ public:
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
+  int visit(CastExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
