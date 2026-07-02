@@ -52,26 +52,61 @@ bool Parser::isTypeStart() const {
 }
 
 bool Parser::looksLikeVarDecl() {
-  return isTypeStart();
+  if (isTypeStart()) return true;
+  if (check(Token::ID)) {
+    if (structNames.count(current.text)) return true;
+    if (peek().type == Token::ID) return true;
+  }
+  return false;
 }
 
 std::string Parser::parseType() {
-  if (match(Token::INT)) return "int";
-  if (match(Token::BOOL)) return "bool";
-  if (match(Token::CHAR)) return "char";
-  if (match(Token::STRING)) return "string";
-  if (match(Token::VOID)) return "void";
-  error("se esperaba un tipo");
+  std::string base;
+  if (match(Token::INT)) base = "int";
+  else if (match(Token::BOOL)) base = "bool";
+  else if (match(Token::CHAR)) base = "char";
+  else if (match(Token::STRING)) base = "string";
+  else if (match(Token::VOID)) base = "void";
+  else if (check(Token::ID)) { base = current.text; advance(); }
+  else error("se esperaba un tipo");
+  if (check(Token::LBRACKET) && peek().type == Token::RBRACKET) {
+    advance(); advance();
+    base += "[]";
+  } else if (check(Token::LBRACKET) && peek().type == Token::COMA) {
+    advance(); advance();
+    expect(Token::RBRACKET, "se esperaba ']' en el tipo de matriz");
+    base += "[,]";
+  }
+  return base;
 }
 
 Program *Parser::parseProgram() {
   Program *p = new Program();
   while (!isAtEnd()) {
-    if (check(Token::CLASS)) p->classes.push_back(parseClassDecl());
-    else error("se esperaba 'class'");
+    if (check(Token::STRUCT)) p->structs.push_back(parseStructDecl());
+    else if (check(Token::CLASS)) p->classes.push_back(parseClassDecl());
+    else error("se esperaba 'class' o 'struct'");
   }
   if (p->classes.empty()) error("el programa no contiene ninguna clase");
   return p;
+}
+
+StructDecl *Parser::parseStructDecl() {
+  expect(Token::STRUCT, "se esperaba 'struct'");
+  Token name = expect(Token::ID, "se esperaba el nombre de la estructura");
+  StructDecl *s = new StructDecl();
+  s->name = name.text;
+  structNames.insert(s->name);
+  expect(Token::LBRACE, "se esperaba '{' tras el nombre de la estructura");
+  while (!check(Token::RBRACE) && !isAtEnd()) {
+    StructField f;
+    f.type = parseType();
+    f.name = expect(Token::ID, "se esperaba el nombre del campo").text;
+    expect(Token::SEMICOL, "se esperaba ';' tras el campo");
+    s->fields.push_back(f);
+  }
+  expect(Token::RBRACE, "se esperaba '}' al cerrar la estructura");
+  return s;
 }
 
 ClassDecl *Parser::parseClassDecl() {
@@ -381,6 +416,23 @@ std::vector<Exp *> Parser::parseArgs() {
 
 Exp *Parser::parsePrimary() {
   int L = current.line, C = current.col;
+  if (check(Token::NEW)) {
+    advance();
+    std::string et = parseType();
+    expect(Token::LBRACKET, "se esperaba '[' tras 'new " + et + "'");
+    Exp *first = parseExpr();
+    if (match(Token::COMA)) {
+      Exp *second = parseExpr();
+      expect(Token::RBRACKET, "se esperaba ']' al cerrar 'new'");
+      NewMatrixExp *m = new NewMatrixExp(et, first, second);
+      m->line = L; m->col = C;
+      return m;
+    }
+    expect(Token::RBRACKET, "se esperaba ']' al cerrar 'new'");
+    NewArrayExp *na = new NewArrayExp(et, first);
+    na->line = L; na->col = C;
+    return na;
+  }
   if (check(Token::NUM)) {
     long v = std::stol(current.text);
     advance();
@@ -413,6 +465,26 @@ Exp *Parser::parsePrimary() {
       expect(Token::RPAREN, "se esperaba ')' al cerrar la llamada");
       call->line = L; call->col = C;
       return call;
+    }
+    if (match(Token::DOT)) {
+      Token field = expect(Token::ID, "se esperaba el nombre del campo tras '.'");
+      FieldExp *fe = new FieldExp(name, field.text);
+      fe->line = L; fe->col = C;
+      return fe;
+    }
+    if (match(Token::LBRACKET)) {
+      Exp *idx = parseExpr();
+      if (match(Token::COMA)) {
+        Exp *colE = parseExpr();
+        expect(Token::RBRACKET, "se esperaba ']' tras los indices de matriz");
+        MatrixAccessExp *ma = new MatrixAccessExp(name, idx, colE);
+        ma->line = L; ma->col = C;
+        return ma;
+      }
+      expect(Token::RBRACKET, "se esperaba ']' tras el indice");
+      ArrayAccessExp *aa = new ArrayAccessExp(name, idx);
+      aa->line = L; aa->col = C;
+      return aa;
     }
     IdExp *e = new IdExp(name);
     e->line = L; e->col = C;

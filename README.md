@@ -3,7 +3,11 @@
 ## Gramatica del compilador
 
 ```bnf
-Program        ::= ClassDecl+
+Program        ::= (StructDecl | ClassDecl)+
+
+StructDecl     ::= "struct" id "{" FieldDecl* "}"
+
+FieldDecl      ::= Type id ";"
 
 ClassDecl      ::= "class" id "{" MethodDecl* "}"
 
@@ -19,11 +23,17 @@ Type           ::= "int"
                  | "char"
                  | "string"
                  | "void"
+                 | id
+                 | Type "[]"
+                 | Type "[,]"
 
 VarType        ::= "int"
                  | "bool"
                  | "char"
                  | "string"
+                 | id
+                 | VarType "[]"
+                 | VarType "[,]"
 
 Block          ::= "{" Stm* "}"
 
@@ -81,8 +91,13 @@ Primary        ::= num
                  | stringlit
                  | "true"
                  | "false"
+                 | "new" Type "[" Expr "]"
+                 | "new" Type "[" Expr "," Expr "]"
                  | id
                  | id "(" Args ")"
+                 | id "." id
+                 | id "[" Expr "]"
+                 | id "[" Expr "," Expr "]"
                  | "(" Expr ")"
 
 Args           ::= epsilon

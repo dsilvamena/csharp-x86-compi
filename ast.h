@@ -91,6 +91,52 @@ public:
   ~CallExp() override { for (auto a : args) delete a; }
 };
 
+class FieldExp : public Exp {
+public:
+  std::string object;
+  std::string field;
+  FieldExp(std::string o, std::string f) : object(std::move(o)), field(std::move(f)) {}
+  int accept(Visitor *v) override;
+};
+
+class NewArrayExp : public Exp {
+public:
+  std::string elemType;
+  Exp *size;
+  NewArrayExp(std::string t, Exp *sz) : elemType(std::move(t)), size(sz) {}
+  int accept(Visitor *v) override;
+  ~NewArrayExp() override { delete size; }
+};
+
+class ArrayAccessExp : public Exp {
+public:
+  std::string name;
+  Exp *index;
+  ArrayAccessExp(std::string n, Exp *i) : name(std::move(n)), index(i) {}
+  int accept(Visitor *v) override;
+  ~ArrayAccessExp() override { delete index; }
+};
+
+class NewMatrixExp : public Exp {
+public:
+  std::string elemType;
+  Exp *rows;
+  Exp *cols;
+  NewMatrixExp(std::string t, Exp *r, Exp *c) : elemType(std::move(t)), rows(r), cols(c) {}
+  int accept(Visitor *v) override;
+  ~NewMatrixExp() override { delete rows; delete cols; }
+};
+
+class MatrixAccessExp : public Exp {
+public:
+  std::string name;
+  Exp *rowIdx;
+  Exp *colIdx;
+  MatrixAccessExp(std::string n, Exp *r, Exp *c) : name(std::move(n)), rowIdx(r), colIdx(c) {}
+  int accept(Visitor *v) override;
+  ~MatrixAccessExp() override { delete rowIdx; delete colIdx; }
+};
+
 class Param {
 public:
   std::string type;
@@ -199,6 +245,18 @@ public:
   int accept(Visitor *v) override;
 };
 
+struct StructField {
+  std::string type;
+  std::string name;
+};
+
+class StructDecl {
+public:
+  std::string name;
+  std::vector<StructField> fields;
+  int accept(Visitor *v);
+};
+
 class MethodDecl {
 public:
   std::string retType;
@@ -221,9 +279,13 @@ public:
 
 class Program {
 public:
+  std::vector<StructDecl *> structs;
   std::vector<ClassDecl *> classes;
   int accept(Visitor *v);
-  ~Program() { for (auto c : classes) delete c; }
+  ~Program() {
+    for (auto s : structs) delete s;
+    for (auto c : classes) delete c;
+  }
 };
 
 std::string printAst(Program *p);

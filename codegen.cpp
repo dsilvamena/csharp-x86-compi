@@ -58,6 +58,16 @@ void collectExp(Exp *e, std::vector<std::string> &lits) {
     collectExp(u->operand, lits);
   } else if (auto c = dynamic_cast<CallExp *>(e)) {
     for (auto a : c->args) collectExp(a, lits);
+  } else if (auto na = dynamic_cast<NewArrayExp *>(e)) {
+    collectExp(na->size, lits);
+  } else if (auto aa = dynamic_cast<ArrayAccessExp *>(e)) {
+    collectExp(aa->index, lits);
+  } else if (auto nm = dynamic_cast<NewMatrixExp *>(e)) {
+    collectExp(nm->rows, lits);
+    collectExp(nm->cols, lits);
+  } else if (auto ma = dynamic_cast<MatrixAccessExp *>(e)) {
+    collectExp(ma->rowIdx, lits);
+    collectExp(ma->colIdx, lits);
   }
 }
 }
@@ -178,6 +188,57 @@ int GenCodeVisitor::visit(CallExp *e) {
   return 0;
 }
 
+int GenCodeVisitor::visit(FieldExp *e) {
+  int idx = structFieldIndex[varType[e->object]][e->field];
+  code << "  movq " << varOffset[e->object] << "(%rbp), %rax\n";
+  code << "  movq " << (idx * 8) << "(%rax), %rax\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(NewArrayExp *e) {
+  e->size->accept(this);
+  code << "  movq $8, %rcx\n  imulq %rcx, %rax\n";
+  code << "  movq %rax, %rdi\n  call malloc@PLT\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(ArrayAccessExp *e) {
+  e->index->accept(this);
+  code << "  movq %rax, %rcx\n";
+  code << "  movq " << varOffset[e->name] << "(%rbp), %rax\n";
+  code << "  movq (%rax, %rcx, 8), %rax\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(NewMatrixExp *e) {
+  e->cols->accept(this);
+  code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
+  e->rows->accept(this);
+  code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
+  code << "  imulq %rcx, %rax\n";
+  code << "  movq $8, %rcx\n  imulq %rcx, %rax\n";
+  code << "  movq %rax, %rdi\n  call malloc@PLT\n";
+  return 0;
+}
+
+void GenCodeVisitor::emitMatrixLinearIndex(MatrixAccessExp *e) {
+  long cols = matrixCols.count(e->name) ? matrixCols[e->name] : 0;
+  e->rowIdx->accept(this);
+  code << "  movq $" << cols << ", %rcx\n  imulq %rcx, %rax\n";
+  code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
+  e->colIdx->accept(this);
+  code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
+  code << "  addq %rcx, %rax\n";
+}
+
+int GenCodeVisitor::visit(MatrixAccessExp *e) {
+  emitMatrixLinearIndex(e);
+  code << "  movq %rax, %rcx\n";
+  code << "  movq " << varOffset[e->name] << "(%rbp), %rax\n";
+  code << "  movq (%rax, %rcx, 8), %rax\n";
+  return 0;
+}
+
 void GenCodeVisitor::emitLoc(int line) {
   if (trackLoc && line > 0 && line != curLine) {
     code << "  # .loc " << line << "\n";
@@ -199,8 +260,15 @@ int GenCodeVisitor::visit(VarDecStm *s) {
   currentOffset -= 8;
   varOffset[s->name] = off;
   varType[s->name] = s->type;
+  if (auto nm = dynamic_cast<NewMatrixExp *>(s->init))
+    if (auto c = dynamic_cast<NumberExp *>(nm->cols))
+      matrixCols[s->name] = c->value;
   if (s->init) {
     s->init->accept(this);
+    code << "  movq %rax, " << off << "(%rbp)\n";
+  } else if (structFieldIndex.count(s->type)) {
+    code << "  movq $" << (structSize[s->type] * 8) << ", %rdi\n";
+    code << "  call malloc@PLT\n";
     code << "  movq %rax, " << off << "(%rbp)\n";
   } else {
     code << "  movq $0, " << off << "(%rbp)\n";
@@ -209,10 +277,39 @@ int GenCodeVisitor::visit(VarDecStm *s) {
 }
 
 int GenCodeVisitor::visit(AssignStm *s) {
-  auto t = dynamic_cast<IdExp *>(s->target);
-  if (!t) return 0;
-  s->value->accept(this);
-  code << "  movq %rax, " << varOffset[t->name] << "(%rbp)\n";
+  if (auto t = dynamic_cast<IdExp *>(s->target)) {
+    s->value->accept(this);
+    code << "  movq %rax, " << varOffset[t->name] << "(%rbp)\n";
+    return 0;
+  }
+  if (auto f = dynamic_cast<FieldExp *>(s->target)) {
+    int idx = structFieldIndex[varType[f->object]][f->field];
+    s->value->accept(this);
+    code << "  movq %rax, %rcx\n";
+    code << "  movq " << varOffset[f->object] << "(%rbp), %rax\n";
+    code << "  movq %rcx, " << (idx * 8) << "(%rax)\n";
+    return 0;
+  }
+  if (auto a = dynamic_cast<ArrayAccessExp *>(s->target)) {
+    s->value->accept(this);
+    code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
+    a->index->accept(this);
+    code << "  movq %rax, %rcx\n";
+    code << "  movq " << varOffset[a->name] << "(%rbp), %rax\n";
+    code << "  movq (%rsp), %rdx\n  addq $16, %rsp\n";
+    code << "  movq %rdx, (%rax, %rcx, 8)\n";
+    return 0;
+  }
+  if (auto m = dynamic_cast<MatrixAccessExp *>(s->target)) {
+    s->value->accept(this);
+    code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
+    emitMatrixLinearIndex(m);
+    code << "  movq %rax, %rcx\n";
+    code << "  movq " << varOffset[m->name] << "(%rbp), %rax\n";
+    code << "  movq (%rsp), %rdx\n  addq $16, %rsp\n";
+    code << "  movq %rdx, (%rax, %rcx, 8)\n";
+    return 0;
+  }
   return 0;
 }
 
@@ -349,7 +446,15 @@ int GenCodeVisitor::visit(ClassDecl *d) {
   return 0;
 }
 
+int GenCodeVisitor::visit(StructDecl *sd) {
+  for (size_t i = 0; i < sd->fields.size(); i++)
+    structFieldIndex[sd->name][sd->fields[i].name] = (int)i;
+  structSize[sd->name] = (int)sd->fields.size();
+  return 0;
+}
+
 int GenCodeVisitor::visit(Program *p) {
+  for (auto *s : p->structs) s->accept(this);
   for (auto c : p->classes) c->accept(this);
   return 0;
 }

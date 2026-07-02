@@ -10,6 +10,8 @@ std::string Token::typeName(Type t) {
   switch (t) {
     case CLASS: return "class";
     case STATIC: return "static";
+    case STRUCT: return "struct";
+    case NEW: return "new";
     case INT: return "int";
     case BOOL: return "bool";
     case CHAR: return "char";
@@ -48,6 +50,8 @@ std::string Token::typeName(Type t) {
     case RPAREN: return ")";
     case LBRACE: return "{";
     case RBRACE: return "}";
+    case LBRACKET: return "[";
+    case RBRACKET: return "]";
     case SEMICOL: return ";";
     case COMA: return ",";
     case DOT: return ".";

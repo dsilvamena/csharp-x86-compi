@@ -19,6 +19,11 @@ int SethiUllmanVisitor::visit(BinaryExp *e) {
 
 int SethiUllmanVisitor::visit(UnaryExp *e) { e->operand->accept(this); e->label = e->operand->label; return 0; }
 int SethiUllmanVisitor::visit(CallExp *e) { for (auto a : e->args) a->accept(this); e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(FieldExp *e) { e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(NewArrayExp *e) { e->size->accept(this); e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(ArrayAccessExp *e) { e->index->accept(this); e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(NewMatrixExp *e) { e->rows->accept(this); e->cols->accept(this); e->label = 1; return 0; }
+int SethiUllmanVisitor::visit(MatrixAccessExp *e) { e->rowIdx->accept(this); e->colIdx->accept(this); e->label = 1; return 0; }
 int SethiUllmanVisitor::visit(Block *s) { for (auto st : s->stms) st->accept(this); return 0; }
 int SethiUllmanVisitor::visit(VarDecStm *s) { if (s->init) s->init->accept(this); return 0; }
 int SethiUllmanVisitor::visit(AssignStm *s) { s->target->accept(this); s->value->accept(this); return 0; }
@@ -30,6 +35,7 @@ int SethiUllmanVisitor::visit(DoWhileStm *s) { s->body->accept(this); s->cond->a
 int SethiUllmanVisitor::visit(ForStm *s) { if (s->init) s->init->accept(this); if (s->cond) s->cond->accept(this); if (s->update) s->update->accept(this); s->body->accept(this); return 0; }
 int SethiUllmanVisitor::visit(ReturnStm *s) { if (s->e) s->e->accept(this); return 0; }
 int SethiUllmanVisitor::visit(BreakStm *) { return 0; }
+int SethiUllmanVisitor::visit(StructDecl *) { return 0; }
 int SethiUllmanVisitor::visit(MethodDecl *d) { d->body->accept(this); return 0; }
 int SethiUllmanVisitor::visit(ClassDecl *d) { for (auto m : d->methods) m->accept(this); return 0; }
-int SethiUllmanVisitor::visit(Program *p) { for (auto c : p->classes) c->accept(this); return 0; }
+int SethiUllmanVisitor::visit(Program *p) { for (auto *s : p->structs) s->accept(this); for (auto c : p->classes) c->accept(this); return 0; }

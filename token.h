@@ -7,7 +7,7 @@
 class Token {
 public:
   enum Type {
-    CLASS, STATIC,
+    CLASS, STATIC, STRUCT, NEW,
     INT, BOOL, CHAR, STRING, VOID,
     IF, ELSE, WHILE, FOR, DO, BREAK, RETURN,
     TRUE, FALSE,
@@ -17,7 +17,7 @@ public:
     LT, GT, LE, GE, EQ, NE,
     AND, OR, NOT,
     ASSIGN,
-    LPAREN, RPAREN, LBRACE, RBRACE,
+    LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET,
     SEMICOL, COMA, DOT,
     ERR, END
   };

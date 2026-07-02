@@ -53,6 +53,11 @@ int ConstantVisitor::visit(UnaryExp *e) {
 }
 
 int ConstantVisitor::visit(CallExp *e) { for (auto a : e->args) a->accept(this); return 0; }
+int ConstantVisitor::visit(FieldExp *e) { e->isConstant = false; return 0; }
+int ConstantVisitor::visit(NewArrayExp *e) { e->size->accept(this); e->isConstant = false; return 0; }
+int ConstantVisitor::visit(ArrayAccessExp *e) { e->index->accept(this); e->isConstant = false; return 0; }
+int ConstantVisitor::visit(NewMatrixExp *e) { e->rows->accept(this); e->cols->accept(this); e->isConstant = false; return 0; }
+int ConstantVisitor::visit(MatrixAccessExp *e) { e->rowIdx->accept(this); e->colIdx->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(Block *s) { for (auto st : s->stms) st->accept(this); return 0; }
 int ConstantVisitor::visit(VarDecStm *s) { if (s->init) s->init->accept(this); return 0; }
 int ConstantVisitor::visit(AssignStm *s) { s->target->accept(this); s->value->accept(this); return 0; }
@@ -64,6 +69,7 @@ int ConstantVisitor::visit(DoWhileStm *s) { s->body->accept(this); s->cond->acce
 int ConstantVisitor::visit(ForStm *s) { if (s->init) s->init->accept(this); if (s->cond) s->cond->accept(this); if (s->update) s->update->accept(this); s->body->accept(this); return 0; }
 int ConstantVisitor::visit(ReturnStm *s) { if (s->e) s->e->accept(this); return 0; }
 int ConstantVisitor::visit(BreakStm *) { return 0; }
+int ConstantVisitor::visit(StructDecl *) { return 0; }
 int ConstantVisitor::visit(MethodDecl *d) { d->body->accept(this); return 0; }
 int ConstantVisitor::visit(ClassDecl *d) { for (auto m : d->methods) m->accept(this); return 0; }
-int ConstantVisitor::visit(Program *p) { for (auto c : p->classes) c->accept(this); return 0; }
+int ConstantVisitor::visit(Program *p) { for (auto *s : p->structs) s->accept(this); for (auto c : p->classes) c->accept(this); return 0; }

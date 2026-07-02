@@ -30,6 +30,11 @@ int IdExp::accept(Visitor *v) { return v->visit(this); }
 int BinaryExp::accept(Visitor *v) { return v->visit(this); }
 int UnaryExp::accept(Visitor *v) { return v->visit(this); }
 int CallExp::accept(Visitor *v) { return v->visit(this); }
+int FieldExp::accept(Visitor *v) { return v->visit(this); }
+int NewArrayExp::accept(Visitor *v) { return v->visit(this); }
+int ArrayAccessExp::accept(Visitor *v) { return v->visit(this); }
+int NewMatrixExp::accept(Visitor *v) { return v->visit(this); }
+int MatrixAccessExp::accept(Visitor *v) { return v->visit(this); }
 int Block::accept(Visitor *v) { return v->visit(this); }
 int VarDecStm::accept(Visitor *v) { return v->visit(this); }
 int AssignStm::accept(Visitor *v) { return v->visit(this); }
@@ -41,6 +46,7 @@ int DoWhileStm::accept(Visitor *v) { return v->visit(this); }
 int ForStm::accept(Visitor *v) { return v->visit(this); }
 int ReturnStm::accept(Visitor *v) { return v->visit(this); }
 int BreakStm::accept(Visitor *v) { return v->visit(this); }
+int StructDecl::accept(Visitor *v) { return v->visit(this); }
 int MethodDecl::accept(Visitor *v) { return v->visit(this); }
 int ClassDecl::accept(Visitor *v) { return v->visit(this); }
 int Program::accept(Visitor *v) { return v->visit(this); }
@@ -73,6 +79,20 @@ public:
       depth++;
       for (auto a : c->args) exp(a);
       depth--;
+    } else if (auto f = dynamic_cast<FieldExp *>(e)) {
+      line("FieldExp " + f->object + "." + f->field);
+    } else if (auto n = dynamic_cast<NewArrayExp *>(e)) {
+      line("NewArrayExp " + n->elemType + "[]");
+      depth++; exp(n->size); depth--;
+    } else if (auto a = dynamic_cast<ArrayAccessExp *>(e)) {
+      line("ArrayAccessExp " + a->name);
+      depth++; exp(a->index); depth--;
+    } else if (auto n = dynamic_cast<NewMatrixExp *>(e)) {
+      line("NewMatrixExp " + n->elemType + "[,]");
+      depth++; exp(n->rows); exp(n->cols); depth--;
+    } else if (auto m = dynamic_cast<MatrixAccessExp *>(e)) {
+      line("MatrixAccessExp " + m->name);
+      depth++; exp(m->rowIdx); exp(m->colIdx); depth--;
     }
   }
   void stm(Stm *s) {
@@ -120,6 +140,12 @@ std::string printAst(Program *p) {
   Printer pr;
   pr.line("Program");
   pr.depth++;
+  for (auto s : p->structs) {
+    pr.line("StructDecl " + s->name);
+    pr.depth++;
+    for (auto &f : s->fields) pr.line("Field " + f.type + " " + f.name);
+    pr.depth--;
+  }
   for (auto c : p->classes) {
     pr.line("ClassDecl " + c->name);
     pr.depth++;

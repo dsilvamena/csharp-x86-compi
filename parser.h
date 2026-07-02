@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "token.h"
 #include <deque>
+#include <set>
 
 class Parser {
 private:
@@ -24,7 +25,9 @@ private:
   bool isTypeStart() const;
   bool looksLikeVarDecl();
   std::string parseType();
+  std::set<std::string> structNames;
 
+  StructDecl *parseStructDecl();
   ClassDecl *parseClassDecl();
   MethodDecl *parseMethodDecl();
   Block *parseBlock();

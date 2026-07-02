@@ -10,10 +10,11 @@
 #include <vector>
 
 class NumberExp; class BoolExp; class CharExp; class StringExp; class IdExp;
-class BinaryExp; class UnaryExp; class CallExp;
+class BinaryExp; class UnaryExp; class CallExp; class FieldExp;
+class NewArrayExp; class ArrayAccessExp; class NewMatrixExp; class MatrixAccessExp;
 class Block; class VarDecStm; class AssignStm; class ExprStm; class PrintStm;
 class IfStm; class WhileStm; class DoWhileStm; class ForStm; class ReturnStm;
-class BreakStm; class MethodDecl; class ClassDecl; class Program;
+class BreakStm; class StructDecl; class MethodDecl; class ClassDecl; class Program;
 
 class Visitor {
 public:
@@ -26,6 +27,11 @@ public:
   virtual int visit(BinaryExp *e) = 0;
   virtual int visit(UnaryExp *e) = 0;
   virtual int visit(CallExp *e) = 0;
+  virtual int visit(FieldExp *e) = 0;
+  virtual int visit(NewArrayExp *e) = 0;
+  virtual int visit(ArrayAccessExp *e) = 0;
+  virtual int visit(NewMatrixExp *e) = 0;
+  virtual int visit(MatrixAccessExp *e) = 0;
   virtual int visit(Block *s) = 0;
   virtual int visit(VarDecStm *s) = 0;
   virtual int visit(AssignStm *s) = 0;
@@ -37,6 +43,7 @@ public:
   virtual int visit(ForStm *s) = 0;
   virtual int visit(ReturnStm *s) = 0;
   virtual int visit(BreakStm *s) = 0;
+  virtual int visit(StructDecl *d) = 0;
   virtual int visit(MethodDecl *d) = 0;
   virtual int visit(ClassDecl *d) = 0;
   virtual int visit(Program *p) = 0;
@@ -45,6 +52,7 @@ public:
 class TypeCheckerVisitor : public Visitor {
   Environment env;
   std::unordered_map<std::string, MethodDecl *> methods;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>> structs;
   std::string currentReturnType;
   int loopDepth = 0;
   std::string lastType;
@@ -63,6 +71,11 @@ public:
   int visit(BinaryExp *e) override;
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
+  int visit(FieldExp *e) override;
+  int visit(NewArrayExp *e) override;
+  int visit(ArrayAccessExp *e) override;
+  int visit(NewMatrixExp *e) override;
+  int visit(MatrixAccessExp *e) override;
   int visit(Block *s) override;
   int visit(VarDecStm *s) override;
   int visit(AssignStm *s) override;
@@ -74,6 +87,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
   int visit(Program *p) override;
@@ -92,6 +106,11 @@ public:
   int visit(BinaryExp *e) override;
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
+  int visit(FieldExp *e) override;
+  int visit(NewArrayExp *e) override;
+  int visit(ArrayAccessExp *e) override;
+  int visit(NewMatrixExp *e) override;
+  int visit(MatrixAccessExp *e) override;
   int visit(Block *s) override;
   int visit(VarDecStm *s) override;
   int visit(AssignStm *s) override;
@@ -103,6 +122,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
   int visit(Program *p) override;
@@ -120,6 +140,11 @@ public:
   int visit(BinaryExp *e) override;
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
+  int visit(FieldExp *e) override;
+  int visit(NewArrayExp *e) override;
+  int visit(ArrayAccessExp *e) override;
+  int visit(NewMatrixExp *e) override;
+  int visit(MatrixAccessExp *e) override;
   int visit(Block *s) override;
   int visit(VarDecStm *s) override;
   int visit(AssignStm *s) override;
@@ -131,6 +156,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
   int visit(Program *p) override;
@@ -141,6 +167,9 @@ class GenCodeVisitor : public Visitor {
   std::vector<std::string> stringLits;
   std::unordered_map<std::string, int> varOffset;
   std::unordered_map<std::string, std::string> varType;
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> structFieldIndex;
+  std::unordered_map<std::string, int> structSize;
+  std::unordered_map<std::string, long> matrixCols;
   int currentOffset = -8;
   int labelCounter = 0;
   std::string currentBreakLabel;
@@ -151,6 +180,7 @@ class GenCodeVisitor : public Visitor {
 
   void emitLoc(int line);
   std::string newLabel(const std::string &base);
+  void emitMatrixLinearIndex(MatrixAccessExp *e);
   void collectStrings(Program *p);
   int countVars(Stm *s);
   std::string exprType(Exp *e) const;
@@ -171,6 +201,11 @@ public:
   int visit(BinaryExp *e) override;
   int visit(UnaryExp *e) override;
   int visit(CallExp *e) override;
+  int visit(FieldExp *e) override;
+  int visit(NewArrayExp *e) override;
+  int visit(ArrayAccessExp *e) override;
+  int visit(NewMatrixExp *e) override;
+  int visit(MatrixAccessExp *e) override;
   int visit(Block *s) override;
   int visit(VarDecStm *s) override;
   int visit(AssignStm *s) override;
@@ -182,6 +217,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
   int visit(Program *p) override;
