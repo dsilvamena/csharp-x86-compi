@@ -11,10 +11,11 @@
 
 class NumberExp; class BoolExp; class CharExp; class StringExp; class IdExp;
 class BinaryExp; class UnaryExp; class CallExp; class FieldExp; class CastExp;
+class AddressOfExp; class DerefExp;
 class NewArrayExp; class ArrayAccessExp; class NewMatrixExp; class MatrixAccessExp;
 class Block; class VarDecStm; class AssignStm; class ExprStm; class PrintStm;
 class IfStm; class WhileStm; class DoWhileStm; class ForStm; class ReturnStm;
-class BreakStm; class StructDecl; class MethodDecl; class ClassDecl; class Program;
+class BreakStm; class UnsafeStm; class StructDecl; class MethodDecl; class ClassDecl; class Program;
 
 class Visitor {
 public:
@@ -29,6 +30,8 @@ public:
   virtual int visit(CallExp *e) = 0;
   virtual int visit(FieldExp *e) = 0;
   virtual int visit(CastExp *e) = 0;
+  virtual int visit(AddressOfExp *e) = 0;
+  virtual int visit(DerefExp *e) = 0;
   virtual int visit(NewArrayExp *e) = 0;
   virtual int visit(ArrayAccessExp *e) = 0;
   virtual int visit(NewMatrixExp *e) = 0;
@@ -44,6 +47,7 @@ public:
   virtual int visit(ForStm *s) = 0;
   virtual int visit(ReturnStm *s) = 0;
   virtual int visit(BreakStm *s) = 0;
+  virtual int visit(UnsafeStm *s) = 0;
   virtual int visit(StructDecl *d) = 0;
   virtual int visit(MethodDecl *d) = 0;
   virtual int visit(ClassDecl *d) = 0;
@@ -56,6 +60,7 @@ class TypeCheckerVisitor : public Visitor {
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> structs;
   std::string currentReturnType;
   int loopDepth = 0;
+  int unsafeDepth = 0;   // >0 dentro de un bloque unsafe (habilita &x, *p)
   std::string lastType;
 
   std::string typeOf(Exp *e);
@@ -74,6 +79,8 @@ public:
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
   int visit(CastExp *e) override;
+  int visit(AddressOfExp *e) override;
+  int visit(DerefExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -89,6 +96,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(UnsafeStm *s) override;
   int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
@@ -110,6 +118,8 @@ public:
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
   int visit(CastExp *e) override;
+  int visit(AddressOfExp *e) override;
+  int visit(DerefExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -125,6 +135,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(UnsafeStm *s) override;
   int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
@@ -145,6 +156,8 @@ public:
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
   int visit(CastExp *e) override;
+  int visit(AddressOfExp *e) override;
+  int visit(DerefExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -160,6 +173,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(UnsafeStm *s) override;
   int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;
@@ -207,6 +221,8 @@ public:
   int visit(CallExp *e) override;
   int visit(FieldExp *e) override;
   int visit(CastExp *e) override;
+  int visit(AddressOfExp *e) override;
+  int visit(DerefExp *e) override;
   int visit(NewArrayExp *e) override;
   int visit(ArrayAccessExp *e) override;
   int visit(NewMatrixExp *e) override;
@@ -222,6 +238,7 @@ public:
   int visit(ForStm *s) override;
   int visit(ReturnStm *s) override;
   int visit(BreakStm *s) override;
+  int visit(UnsafeStm *s) override;
   int visit(StructDecl *d) override;
   int visit(MethodDecl *d) override;
   int visit(ClassDecl *d) override;

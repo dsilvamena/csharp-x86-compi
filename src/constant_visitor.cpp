@@ -65,6 +65,8 @@ int ConstantVisitor::visit(CastExp *e) {
   folded++;
   return 0;
 }
+int ConstantVisitor::visit(AddressOfExp *e) { e->isConstant = false; return 0; }
+int ConstantVisitor::visit(DerefExp *e) { e->ptr->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(NewArrayExp *e) { e->size->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(ArrayAccessExp *e) { e->index->accept(this); e->isConstant = false; return 0; }
 int ConstantVisitor::visit(NewMatrixExp *e) { e->rows->accept(this); e->cols->accept(this); e->isConstant = false; return 0; }
@@ -80,6 +82,7 @@ int ConstantVisitor::visit(DoWhileStm *s) { s->body->accept(this); s->cond->acce
 int ConstantVisitor::visit(ForStm *s) { if (s->init) s->init->accept(this); if (s->cond) s->cond->accept(this); if (s->update) s->update->accept(this); s->body->accept(this); return 0; }
 int ConstantVisitor::visit(ReturnStm *s) { if (s->e) s->e->accept(this); return 0; }
 int ConstantVisitor::visit(BreakStm *) { return 0; }
+int ConstantVisitor::visit(UnsafeStm *s) { s->body->accept(this); return 0; }
 int ConstantVisitor::visit(StructDecl *) { return 0; }
 int ConstantVisitor::visit(MethodDecl *d) { d->body->accept(this); return 0; }
 int ConstantVisitor::visit(ClassDecl *d) { for (auto m : d->methods) m->accept(this); return 0; }

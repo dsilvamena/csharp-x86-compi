@@ -11,6 +11,7 @@ std::string Token::typeName(Type t) {
     case CLASS: return "class";
     case STATIC: return "static";
     case STRUCT: return "struct";
+    case UNSAFE: return "unsafe";
     case NEW: return "new";
     case INT: return "int";
     case BOOL: return "bool";
@@ -45,6 +46,7 @@ std::string Token::typeName(Type t) {
     case AND: return "&&";
     case OR: return "||";
     case NOT: return "!";
+    case AMP: return "&";
     case ASSIGN: return "=";
     case LPAREN: return "(";
     case RPAREN: return ")";

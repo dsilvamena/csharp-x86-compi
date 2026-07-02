@@ -44,6 +44,7 @@ void collectStm(Stm *s, std::vector<std::string> &lits) {
   else if (auto dws = dynamic_cast<DoWhileStm *>(s)) { collectStm(dws->body, lits); collectExp(dws->cond, lits); }
   else if (auto fs = dynamic_cast<ForStm *>(s)) { collectStm(fs->init, lits); collectExp(fs->cond, lits); collectStm(fs->update, lits); collectStm(fs->body, lits); }
   else if (auto rs = dynamic_cast<ReturnStm *>(s)) collectExp(rs->e, lits);
+  else if (auto us = dynamic_cast<UnsafeStm *>(s)) collectStm(us->body, lits);
 }
 
 void collectExp(Exp *e, std::vector<std::string> &lits) {
@@ -60,6 +61,8 @@ void collectExp(Exp *e, std::vector<std::string> &lits) {
     for (auto a : c->args) collectExp(a, lits);
   } else if (auto ca = dynamic_cast<CastExp *>(e)) {
     collectExp(ca->operand, lits);
+  } else if (auto de = dynamic_cast<DerefExp *>(e)) {
+    collectExp(de->ptr, lits);
   } else if (auto na = dynamic_cast<NewArrayExp *>(e)) {
     collectExp(na->size, lits);
   } else if (auto aa = dynamic_cast<ArrayAccessExp *>(e)) {
@@ -88,6 +91,7 @@ int GenCodeVisitor::countVars(Stm *s) {
   if (auto ws = dynamic_cast<WhileStm *>(s)) return countVars(ws->body);
   if (auto dws = dynamic_cast<DoWhileStm *>(s)) return countVars(dws->body);
   if (auto fs = dynamic_cast<ForStm *>(s)) return countVars(fs->init) + countVars(fs->body);
+  if (auto us = dynamic_cast<UnsafeStm *>(s)) return countVars(us->body);
   return 0;
 }
 
@@ -209,6 +213,19 @@ int GenCodeVisitor::visit(CastExp *e) {
   return 0;
 }
 
+int GenCodeVisitor::visit(AddressOfExp *e) {
+  // &x : dirección del slot de la variable en el frame.
+  code << "  leaq " << varOffset[e->name] << "(%rbp), %rax\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(DerefExp *e) {
+  // *p : evaluar el puntero y leer la memoria apuntada.
+  e->ptr->accept(this);
+  code << "  movq (%rax), %rax\n";
+  return 0;
+}
+
 int GenCodeVisitor::visit(NewArrayExp *e) {
   e->size->accept(this);
   code << "  movq $8, %rcx\n  imulq %rcx, %rax\n";
@@ -324,6 +341,15 @@ int GenCodeVisitor::visit(AssignStm *s) {
     code << "  movq %rdx, (%rax, %rcx, 8)\n";
     return 0;
   }
+  if (auto de = dynamic_cast<DerefExp *>(s->target)) {
+    // *p = v : spill de 'v', evaluar el puntero y escribir la memoria apuntada.
+    s->value->accept(this);                            // v en %rax
+    code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";  // spill v
+    de->ptr->accept(this);                             // dirección en %rax
+    code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";  // v -> %rcx
+    code << "  movq %rcx, (%rax)\n";                    // *p = v
+    return 0;
+  }
   return 0;
 }
 
@@ -417,6 +443,11 @@ int GenCodeVisitor::visit(ReturnStm *s) {
 
 int GenCodeVisitor::visit(BreakStm *) {
   code << "  jmp " << currentBreakLabel << "\n";
+  return 0;
+}
+
+int GenCodeVisitor::visit(UnsafeStm *s) {
+  s->body->accept(this);  // 'unsafe' no cambia el codegen, solo habilita punteros
   return 0;
 }
 

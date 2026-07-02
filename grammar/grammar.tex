@@ -51,16 +51,19 @@
 \N{Param}          & \Def & \N{Type} \Tok{id} \\[6pt]
 
 \N{Type}           & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \T{void} \Or \Tok{id} \\
-                   & \Or  & \N{Type} \T{[]} \Or \N{Type} \T{[,]} \\[6pt]
+                   & \Or  & \N{Type} \T{[]} \Or \N{Type} \T{[,]} \Or \N{Type} \T{*} \\[6pt]
 
 \N{VarType}        & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \Tok{id} \\
-                   & \Or  & \N{VarType} \T{[]} \Or \N{VarType} \T{[,]} \\[6pt]
+                   & \Or  & \N{VarType} \T{[]} \Or \N{VarType} \T{[,]} \Or \N{VarType} \T{*} \\[6pt]
 
 \N{Block}          & \Def & \T{\{} \N{Stm}\M{*} \T{\}} \\[6pt]
 
 \N{Stm}            & \Def & \N{VarDec} \T{;} \Or \N{SimpleStm} \T{;} \Or \N{PrintStm} \\
                    & \Or  & \N{IfStm} \Or \N{WhileStm} \Or \N{ForStm} \\
-                   & \Or  & \N{DoWhileStm} \Or \N{ReturnStm} \Or \N{BreakStm} \Or \N{Block} \\[6pt]
+                   & \Or  & \N{DoWhileStm} \Or \N{ReturnStm} \Or \N{BreakStm} \\
+                   & \Or  & \N{UnsafeStm} \Or \N{Block} \\[6pt]
+
+\N{UnsafeStm}      & \Def & \T{unsafe} \N{Block} \\[6pt]
 
 \N{VarDec}         & \Def & \N{VarType} \Tok{id} \M{[}\T{=} \N{Expr}\M{]} \\[6pt]
 
@@ -98,6 +101,7 @@
 
 \N{Unary}          & \Def & \M{(}\T{-} \Or \T{!}\M{)} \N{Unary} \\
                    & \Or  & \T{(} \N{Type} \T{)} \N{Unary} \\
+                   & \Or  & \T{\&} \Tok{id} \Or \T{*} \N{Unary} \\
                    & \Or  & \N{Primary} \\[6pt]
 
 \N{Primary}        & \Def & \Tok{num} \Or \Tok{charlit} \Or \Tok{stringlit} \Or \T{true} \Or \T{false} \\

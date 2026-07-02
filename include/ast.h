@@ -99,6 +99,23 @@ public:
   int accept(Visitor *v) override;
 };
 
+// Dirección de una variable: &x  (solo en contexto unsafe). Resultado: T*.
+class AddressOfExp : public Exp {
+public:
+  std::string name;
+  explicit AddressOfExp(std::string n) : name(std::move(n)) {}
+  int accept(Visitor *v) override;
+};
+
+// Desreferencia: *p  (lee/escribe la memoria apuntada; solo en unsafe).
+class DerefExp : public Exp {
+public:
+  Exp *ptr;
+  explicit DerefExp(Exp *p) : ptr(p) {}
+  int accept(Visitor *v) override;
+  ~DerefExp() override { delete ptr; }
+};
+
 // Cast explícito: (T)operando.  Soporta conversiones numéricas int/char.
 class CastExp : public Exp {
 public:
@@ -253,6 +270,15 @@ public:
 class BreakStm : public Stm {
 public:
   int accept(Visitor *v) override;
+};
+
+// Bloque unsafe: habilita operaciones con punteros (&x, *p) en su cuerpo.
+class UnsafeStm : public Stm {
+public:
+  Block *body;
+  explicit UnsafeStm(Block *b) : body(b) {}
+  int accept(Visitor *v) override;
+  ~UnsafeStm() override { delete body; }
 };
 
 struct StructField {

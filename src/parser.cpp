@@ -77,6 +77,8 @@ std::string Parser::parseType() {
     expect(Token::RBRACKET, "se esperaba ']' en el tipo de matriz");
     base += "[,]";
   }
+  // Sufijo de puntero (unsafe): int*, Point*, ...
+  while (match(Token::MUL)) base += "*";
   return base;
 }
 
@@ -162,6 +164,12 @@ Stm *Parser::parseStatement() {
   if (check(Token::DO)) return parseDoWhile();
   if (check(Token::RETURN)) return parseReturn();
   if (check(Token::BREAK)) return parseBreak();
+  if (check(Token::UNSAFE)) {
+    Token kw = expect(Token::UNSAFE, "se esperaba 'unsafe'");
+    UnsafeStm *u = new UnsafeStm(parseBlock());
+    u->line = kw.line; u->col = kw.col;
+    return u;
+  }
   if (check(Token::LBRACE)) return parseBlock();
   if (looksLikeVarDecl()) {
     Stm *s = parseVarDecNoSemi();
@@ -415,6 +423,24 @@ Exp *Parser::parseUnary() {
     UnaryExp *u = new UnaryExp(op, operand);
     u->line = L; u->col = C;
     return u;
+  }
+  // &x : dirección de una variable (unsafe).
+  if (check(Token::AMP)) {
+    int L = current.line, C = current.col;
+    advance();
+    Token id = expect(Token::ID, "se esperaba el nombre de la variable tras '&'");
+    AddressOfExp *a = new AddressOfExp(id.text);
+    a->line = L; a->col = C;
+    return a;
+  }
+  // *p : desreferencia (unsafe).  En posición unaria, no es multiplicación.
+  if (check(Token::MUL)) {
+    int L = current.line, C = current.col;
+    advance();
+    Exp *operand = parseUnary();
+    DerefExp *de = new DerefExp(operand);
+    de->line = L; de->col = C;
+    return de;
   }
   return parsePrimary();
 }

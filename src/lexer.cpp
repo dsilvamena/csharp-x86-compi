@@ -57,7 +57,7 @@ void Lexer::skipSpacesAndComments() {
 static const std::unordered_map<std::string, Token::Type> &keywords() {
   static const std::unordered_map<std::string, Token::Type> kw = {
       {"class", Token::CLASS},   {"static", Token::STATIC}, {"struct", Token::STRUCT},
-      {"new", Token::NEW},       {"int", Token::INT},
+      {"unsafe", Token::UNSAFE}, {"new", Token::NEW},       {"int", Token::INT},
       {"bool", Token::BOOL},     {"char", Token::CHAR},     {"string", Token::STRING},
       {"void", Token::VOID},     {"if", Token::IF},         {"else", Token::ELSE},
       {"while", Token::WHILE},   {"for", Token::FOR},       {"do", Token::DO},
@@ -171,7 +171,7 @@ Token Lexer::nextToken() {
       advance(); return Token(Token::GT, ">", L, C);
     case '&':
       if (peek() == '&') { advance(); advance(); return Token(Token::AND, "&&", L, C); }
-      break;
+      advance(); return Token(Token::AMP, "&", L, C);
     case '|':
       if (peek() == '|') { advance(); advance(); return Token(Token::OR, "||", L, C); }
       break;

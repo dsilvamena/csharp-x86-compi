@@ -12,6 +12,8 @@ Docker para ensamblar y ejecutar dentro de un contenedor Linux.
 ## Características
 
 - Parser descendente recursivo para un subconjunto documentado de C#.
+- Tipos primitivos (`int`, `bool`, `char`, `string`), `struct`, arreglos 1D/2D,
+  cast explícito `(int)`/`(char)` y punteros `unsafe` (`int*`, `&x`, `*p`).
 - Verificación semántica con tablas de símbolos y alcances anidados.
 - Generación de código x86-64 GNU/AT&T.
 - Optimizaciones opcionales activadas por defecto:
@@ -77,22 +79,22 @@ ensamblador generado necesita Linux o Docker para ejecutarse.
 Linux y macOS:
 
 ```bash
-./build/compiler inputs/07_cast.cs
+./build/compiler inputs/08_pointers.cs
 ```
 
 El comando genera:
 
 ```text
-outputs/07_cast.s
+outputs/08_pointers.s
 ```
 
 Opciones útiles del compilador:
 
 ```bash
-./build/compiler inputs/07_cast.cs --opt
-./build/compiler inputs/07_cast.cs --no-opt
-./build/compiler inputs/07_cast.cs --tokens --ast
-./build/compiler inputs/07_cast.cs -o outputs/custom_name.s
+./build/compiler inputs/08_pointers.cs --opt
+./build/compiler inputs/08_pointers.cs --no-opt
+./build/compiler inputs/08_pointers.cs --tokens --ast
+./build/compiler inputs/08_pointers.cs -o outputs/custom_name.s
 ```
 
 `--opt` es el modo por defecto.
@@ -102,15 +104,15 @@ Opciones útiles del compilador:
 Linux:
 
 ```bash
-./build/compiler inputs/07_cast.cs
-g++ -no-pie outputs/07_cast.s -o outputs/07_cast
-./outputs/07_cast
+./build/compiler inputs/08_pointers.cs
+g++ -no-pie outputs/08_pointers.s -o outputs/08_pointers
+./outputs/08_pointers
 ```
 
 macOS:
 
 ```bash
-scripts/docker.sh run inputs/07_cast.cs
+scripts/docker.sh run inputs/08_pointers.cs
 ```
 
 El comando de macOS reconstruye el compilador dentro de un contenedor Linux,

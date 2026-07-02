@@ -32,6 +32,8 @@ int UnaryExp::accept(Visitor *v) { return v->visit(this); }
 int CallExp::accept(Visitor *v) { return v->visit(this); }
 int FieldExp::accept(Visitor *v) { return v->visit(this); }
 int CastExp::accept(Visitor *v) { return v->visit(this); }
+int AddressOfExp::accept(Visitor *v) { return v->visit(this); }
+int DerefExp::accept(Visitor *v) { return v->visit(this); }
 int NewArrayExp::accept(Visitor *v) { return v->visit(this); }
 int ArrayAccessExp::accept(Visitor *v) { return v->visit(this); }
 int NewMatrixExp::accept(Visitor *v) { return v->visit(this); }
@@ -47,6 +49,7 @@ int DoWhileStm::accept(Visitor *v) { return v->visit(this); }
 int ForStm::accept(Visitor *v) { return v->visit(this); }
 int ReturnStm::accept(Visitor *v) { return v->visit(this); }
 int BreakStm::accept(Visitor *v) { return v->visit(this); }
+int UnsafeStm::accept(Visitor *v) { return v->visit(this); }
 int StructDecl::accept(Visitor *v) { return v->visit(this); }
 int MethodDecl::accept(Visitor *v) { return v->visit(this); }
 int ClassDecl::accept(Visitor *v) { return v->visit(this); }
@@ -85,6 +88,11 @@ public:
     } else if (auto ca = dynamic_cast<CastExp *>(e)) {
       line("CastExp (" + ca->targetType + ")");
       depth++; exp(ca->operand); depth--;
+    } else if (auto ao = dynamic_cast<AddressOfExp *>(e)) {
+      line("AddressOfExp &" + ao->name);
+    } else if (auto de = dynamic_cast<DerefExp *>(e)) {
+      line("DerefExp *");
+      depth++; exp(de->ptr); depth--;
     } else if (auto n = dynamic_cast<NewArrayExp *>(e)) {
       line("NewArrayExp " + n->elemType + "[]");
       depth++; exp(n->size); depth--;
@@ -128,6 +136,8 @@ public:
       line("ReturnStm"); if (r->e) { depth++; exp(r->e); depth--; }
     } else if (dynamic_cast<BreakStm *>(s)) {
       line("BreakStm");
+    } else if (auto u = dynamic_cast<UnsafeStm *>(s)) {
+      line("UnsafeStm"); depth++; stm(u->body); depth--;
     }
   }
   void method(MethodDecl *m) {

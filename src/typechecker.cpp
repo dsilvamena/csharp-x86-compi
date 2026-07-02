@@ -16,6 +16,7 @@ bool assignable(const std::string &to, const std::string &from) {
 std::string stripSuffix(const std::string &t) {
   if (t.size() >= 3 && t.substr(t.size() - 3) == "[,]") return t.substr(0, t.size() - 3);
   if (t.size() >= 2 && t.substr(t.size() - 2) == "[]") return t.substr(0, t.size() - 2);
+  if (!t.empty() && t.back() == '*') return t.substr(0, t.size() - 1);
   return t;
 }
 }
@@ -138,6 +139,29 @@ int TypeCheckerVisitor::visit(CastExp *e) {
                      " (solo int/char numericos)", e->line, e->col);
 }
 
+int TypeCheckerVisitor::visit(AddressOfExp *e) {
+  if (unsafeDepth == 0)
+    throw CompileError("semantico", "'&' solo se permite dentro de un bloque 'unsafe'",
+                       e->line, e->col);
+  std::string vt;
+  if (!env.lookup(e->name, vt))
+    throw CompileError("semantico", "variable no declarada: '" + e->name + "'", e->line, e->col);
+  e->inferredType = lastType = vt + "*";
+  return 0;
+}
+
+int TypeCheckerVisitor::visit(DerefExp *e) {
+  if (unsafeDepth == 0)
+    throw CompileError("semantico", "'*' (desreferencia) solo se permite en 'unsafe'",
+                       e->line, e->col);
+  std::string pt = typeOf(e->ptr);
+  if (pt.empty() || pt.back() != '*')
+    throw CompileError("semantico", "no se puede desreferenciar un no-puntero (" + pt + ")",
+                       e->line, e->col);
+  e->inferredType = lastType = pt.substr(0, pt.size() - 1);  // tipo apuntado
+  return 0;
+}
+
 int TypeCheckerVisitor::visit(NewArrayExp *e) {
   if (!isType(e->elemType) || e->elemType == "void")
     throw CompileError("semantico", "tipo de elemento invalido en 'new': '" + e->elemType + "'",
@@ -226,8 +250,9 @@ int TypeCheckerVisitor::visit(AssignStm *s) {
     id->inferredType = tt;
   } else if (dynamic_cast<FieldExp *>(s->target) ||
              dynamic_cast<ArrayAccessExp *>(s->target) ||
-             dynamic_cast<MatrixAccessExp *>(s->target)) {
-    tt = typeOf(s->target);
+             dynamic_cast<MatrixAccessExp *>(s->target) ||
+             dynamic_cast<DerefExp *>(s->target)) {
+    tt = typeOf(s->target);  // valida campo/índice/puntero y anota inferredType
   } else {
     throw CompileError("semantico", "el lado izquierdo de '=' no es asignable", s->line, s->col);
   }
@@ -303,6 +328,13 @@ int TypeCheckerVisitor::visit(ReturnStm *s) {
 int TypeCheckerVisitor::visit(BreakStm *s) {
   if (loopDepth == 0)
     throw CompileError("semantico", "'break' fuera de un bucle", s->line, s->col);
+  return 0;
+}
+
+int TypeCheckerVisitor::visit(UnsafeStm *s) {
+  unsafeDepth++;
+  s->body->accept(this);
+  unsafeDepth--;
   return 0;
 }
 
