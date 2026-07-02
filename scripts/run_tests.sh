@@ -3,21 +3,24 @@
 # run_tests.sh — Suite de pruebas (correr en Linux x86-64 con g++).
 # =============================================================================
 # Para cada inputs/*.cs:
-#   · inputs err_*  -> deben FALLAR en compilación con la fase esperada
+#   · err_*     -> deben FALLAR en compilación con la fase esperada
 #                      (léxico/sintáctico/semántico, tomada del nombre del archivo).
 #   · resto         -> compilar a .s con --opt y --no-opt, ensamblar con
 #                      `g++ -no-pie`, ejecutar y comparar la salida con
 #                      tests/expected/<name>.txt. Además se exige que --opt y
 #                      --no-opt produzcan la MISMA salida.
 #
-# Las salidas de referencia viven en tests/expected/ (versionadas), NO en
+# Las salidas de referencia viven en tests/expected/ (versionadas), NO en``
 # outputs/, porque `make clean` borra outputs/. Los .s y binarios intermedios
 # sí se escriben en outputs/ (desechables).
 # =============================================================================
 set -u
 cd "$(dirname "$0")/.."
 
-if [ ! -x ./compiler ]; then
+COMPILER="${COMPILER:-./build/compiler}"
+INPUT_DIR="${INPUT_DIR:-inputs}"
+
+if [ ! -x "$COMPILER" ]; then
   echo "compilando..."; make >/dev/null || { echo "build fallo"; exit 1; }
 fi
 mkdir -p outputs tests/expected
@@ -26,17 +29,17 @@ PASS=0; FAIL=0
 
 run_one() {  # <name> <src> <mode>
   local name="$1" src="$2" mode="$3"
-  ./compiler "$src" "$mode" -o "outputs/$name.s" >/dev/null 2>/tmp/cerr || { echo "FAIL $name [$mode] (compile)"; cat /tmp/cerr; return 1; }
+  "$COMPILER" "$src" "$mode" -o "outputs/$name.s" >/dev/null 2>/tmp/cerr || { echo "FAIL $name [$mode] (compile)"; cat /tmp/cerr; return 1; }
   g++ -no-pie "outputs/$name.s" -o "outputs/$name" 2>/tmp/aerr || { echo "FAIL $name [$mode] (assemble)"; cat /tmp/aerr; return 1; }
   ./outputs/$name
 }
 
-for src in inputs/*.cs; do
+for src in "$INPUT_DIR"/*.cs; do
   name=$(basename "$src" .cs)
   if [[ "$name" == err_* ]]; then
     # La fase esperada es el sufijo del nombre: err_01_lexico -> lexico.
     phase="${name##*_}"
-    if ./compiler "$src" >/dev/null 2>/tmp/cerr; then
+    if "$COMPILER" "$src" >/dev/null 2>/tmp/cerr; then
       echo "FAIL $name (deberia fallar la compilacion)"; FAIL=$((FAIL+1))
     elif ! grep -q "error $phase" /tmp/cerr; then
       echo "FAIL $name (fase != $phase)  ->  $(head -1 /tmp/cerr)"; FAIL=$((FAIL+1))

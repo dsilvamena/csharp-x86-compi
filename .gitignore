@@ -1,3 +1,6 @@
+.docker-build/
+build/
 compiler
+compiler.exe
 outputs/
 .DS_Store

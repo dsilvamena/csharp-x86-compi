@@ -1,87 +1,207 @@
 # csharp-x86-compi
 
-Compilador de un subconjunto de C# a ensamblador x86-64 (AT&T / sintaxis GNU),
-escrito en C++17. Flujo: `archivo .cs → Lexer → Parser descendente recursivo →
-AST con accept(Visitor*) → TypeCheckerVisitor → GenCodeVisitor → x86-64 AT&T`.
-Con `--opt` (por defecto) se aplican plegado de constantes, numeración de
-Sethi-Ullman y un peephole textual sobre el `.s`.
+`csharp-x86-compi` es un compilador en C++17 para un subconjunto pequeño de C#.
+Lee archivos `.cs`, los valida con un lexer, un parser y un type checker, y
+genera ensamblador x86-64 en sintaxis GNU/AT&T.
+
+El ensamblador generado está orientado a Linux ELF (`printf@PLT`, `-no-pie`).
+Esto significa que el compilador se puede construir en Linux o macOS, pero los
+programas generados se ejecutan de forma nativa solo en Linux. En macOS se usa
+Docker para ensamblar y ejecutar dentro de un contenedor Linux.
+
+## Características
+
+- Parser descendente recursivo para un subconjunto documentado de C#.
+- Verificación semántica con tablas de símbolos y alcances anidados.
+- Generación de código x86-64 GNU/AT&T.
+- Optimizaciones opcionales activadas por defecto:
+  - plegado de constantes
+  - numeración de Sethi-Ullman
+  - optimización peephole textual
+- Suite de pruebas para programas válidos y errores esperados del compilador.
+
+## Estructura del repositorio
+
+```text
+include/         Headers del compilador
+src/             Implementación en C++17
+inputs/          Programas .cs válidos e inválidos de ejemplo
+tests/expected/  Salidas esperadas versionadas para programas válidos
+scripts/         Utilidades de Docker, pruebas y salidas esperadas
+outputs/         Ensamblador y binarios generados, ignorados por git
+build/           Binario nativo del compilador, ignorado por git
+.docker-build/   Binario Linux usado por scripts/docker.sh, ignorado por git
+```
 
 ## Requisitos
 
-- `g++` con soporte C++17 (macOS o Linux).
-- El `.s` generado es para **Linux ELF** (`printf@PLT`, `-no-pie`): en Linux se
-  ensambla directo con `g++`; en macOS se necesita **Docker** para ejecutarlo.
-
-## Compilar el compilador
+Linux:
 
 ```bash
-make          # produce ./compiler
+sudo apt-get update
+sudo apt-get install -y build-essential make
 ```
 
-## Uso
+macOS:
 
 ```bash
-./compiler inputs/07_cast.cs                 # -> outputs/07_cast.s   [--opt por defecto]
-./compiler inputs/07_cast.cs --no-opt        # sin optimizaciones
-./compiler inputs/07_cast.cs --tokens --ast  # depuración: tokens y AST
-./compiler inputs/07_cast.cs -o salida.s     # ruta de salida explícita
+xcode-select --install
 ```
 
-La carpeta `outputs/` se crea automáticamente al compilar (no forma parte del
-repositorio; `make clean` la elimina).
-
-Para ensamblar y ejecutar el `.s` en **Linux**:
+Docker es necesario en macOS para ejecutar programas generados y correr la suite
+completa de pruebas. Instala Docker Desktop y verifica que esté disponible:
 
 ```bash
-g++ -no-pie outputs/07_cast.s -o outputs/07_cast && ./outputs/07_cast
+docker --version
 ```
 
-En **macOS** (Apple Silicon o Intel), vía Docker:
+## Construir el compilador
+
+Linux y macOS:
 
 ```bash
-docker run --rm --platform linux/amd64 -v "$PWD/outputs:/w" gcc:13 \
-  bash -c 'cd /w && g++ -no-pie 07_cast.s -o 07_cast && ./07_cast'
+make
 ```
 
-## Compilar / ejecutar todos los inputs
+El comando genera:
+
+```text
+build/compiler
+```
+
+En macOS, este binario puede convertir archivos `.cs` en archivos `.s`, pero el
+ensamblador generado necesita Linux o Docker para ejecutarse.
+
+## Generar ensamblador desde un archivo
+
+Linux y macOS:
 
 ```bash
-make compile-all   # compila todos los inputs/*.cs -> outputs/*.s (nativo)
-make run-all       # además ensambla y ejecuta cada .s en Docker (gcc:13)
-make clean         # borra el binario y outputs/
+./build/compiler inputs/07_cast.cs
 ```
 
-## Pruebas
+El comando genera:
 
-La suite (`scripts/run_tests.sh`) recorre `inputs/*.cs`:
+```text
+outputs/07_cast.s
+```
 
-- Para cada programa válido lo compila con `--opt` y con `--no-opt`, ensambla con
-  `g++ -no-pie`, lo ejecuta y compara su salida con `tests/expected/<name>.txt`.
-  Exige además que `--opt` y `--no-opt` produzcan **la misma** salida.
-- Para cada `inputs/err_*.cs` exige que la compilación **falle** con la fase
-  esperada (léxico / sintáctico / semántico), deducida del nombre del archivo.
-
-Las salidas de referencia viven en `tests/expected/` (versionadas) y **no** en
-`outputs/`, para que sobrevivan a `make clean` (que borra `outputs/`).
-
-En **Linux**:
+Opciones útiles del compilador:
 
 ```bash
-make test                  # compila y corre la suite
+./build/compiler inputs/07_cast.cs --opt
+./build/compiler inputs/07_cast.cs --no-opt
+./build/compiler inputs/07_cast.cs --tokens --ast
+./build/compiler inputs/07_cast.cs -o outputs/custom_name.s
 ```
 
-En **macOS** (el `.s` es Linux ELF, no corre nativo), vía Docker (gcc:13):
+`--opt` es el modo por defecto.
+
+## Ejecutar un programa generado
+
+Linux:
 
 ```bash
-scripts/docker.sh test     # reconstruye dentro del contenedor + suite completa
-scripts/docker.sh gen      # regenera tests/expected/ (solo si el cambio es intencional)
-scripts/docker.sh run inputs/07_cast.cs   # compila, linka y ejecuta un programa
+./build/compiler inputs/07_cast.cs
+g++ -no-pie outputs/07_cast.s -o outputs/07_cast
+./outputs/07_cast
 ```
 
-Regenera `tests/expected/` con `gen` únicamente cuando un cambio de salida sea
-intencional, y revisa el diff.
+macOS:
 
-## Gramatica del compilador
+```bash
+scripts/docker.sh run inputs/07_cast.cs
+```
+
+El comando de macOS reconstruye el compilador dentro de un contenedor Linux,
+genera el ensamblador, lo enlaza con `g++ -no-pie` y ejecuta el programa.
+
+## Ejecutar todos los programas válidos de ejemplo
+
+Linux:
+
+```bash
+make compile-all
+for s in outputs/*.s; do
+  b="${s%.s}"
+  g++ -no-pie "$s" -o "$b"
+  "$b"
+done
+```
+
+macOS:
+
+```bash
+make run-all
+```
+
+`make run-all` usa Docker para ensamblar y ejecutar el código Linux generado.
+Omite `inputs/err_*.cs` porque esos archivos son fallos esperados del
+compilador.
+
+## Correr la suite de pruebas
+
+Linux:
+
+```bash
+make test
+```
+
+macOS:
+
+```bash
+scripts/docker.sh test
+```
+
+La suite revisa todos los archivos en `inputs/`:
+
+- Los programas válidos se compilan con `--opt` y `--no-opt`.
+- Ambos modos deben producir la misma salida en ejecución.
+- La salida se compara con `tests/expected/<name>.txt`.
+- Los programas inválidos llamados `err_*.cs` deben fallar en la fase esperada:
+  léxica, sintáctica o semántica.
+
+## Regenerar salidas esperadas
+
+Regenera las salidas esperadas solo cuando el cambio de comportamiento sea
+intencional.
+
+Linux:
+
+```bash
+bash scripts/gen_expected.sh
+git diff tests/expected
+```
+
+macOS:
+
+```bash
+scripts/docker.sh gen
+git diff tests/expected
+```
+
+Revisa el diff antes de hacer commit de archivos modificados en
+`tests/expected/`.
+
+## Limpiar archivos generados
+
+Linux:
+
+```bash
+make clean
+```
+
+macOS:
+
+```bash
+make clean
+rm -rf .docker-build
+```
+
+`make clean` elimina `build/` y `outputs/`. El comando adicional de macOS elimina
+el binario Linux producido por el helper de Docker.
+
+## Gramática
 
 ```bnf
 Program        ::= (StructDecl | ClassDecl)+

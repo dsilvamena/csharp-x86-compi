@@ -10,10 +10,12 @@ set -eu
 cd "$(dirname "$0")/.."
 make >/dev/null
 mkdir -p outputs tests/expected
-for src in inputs/*.cs; do
+COMPILER="${COMPILER:-./build/compiler}"
+INPUT_DIR="${INPUT_DIR:-inputs}"
+for src in "$INPUT_DIR"/*.cs; do
   name=$(basename "$src" .cs)
   [[ "$name" == err_* ]] && continue
-  ./compiler "$src" -o "outputs/$name.s" >/dev/null
+  "$COMPILER" "$src" -o "outputs/$name.s" >/dev/null
   g++ -no-pie "outputs/$name.s" -o "outputs/$name"
   ./outputs/$name > "tests/expected/$name.txt"
   echo "expected <- $name"
