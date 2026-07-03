@@ -7,6 +7,7 @@
 
 #include "ast.h"
 #include "errors.h"
+#include "lambda.h"
 #include "lexer.h"
 #include "parser.h"
 #include "peephole.h"
@@ -85,6 +86,7 @@ int main(int argc, char **argv) {
     Lexer lexer(source);
     Parser parser(lexer);
     program = parser.parseProgram();
+    liftLambdas(program);
     TypeCheckerVisitor checker;
     checker.check(program);
   } catch (const std::exception &e) {

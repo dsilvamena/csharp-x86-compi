@@ -130,7 +130,6 @@ int TypeCheckerVisitor::visit(FieldExp *e) {
 
 int TypeCheckerVisitor::visit(CastExp *e) {
   std::string ot = typeOf(e->operand);
-  // Solo conversiones numéricas explícitas (int/char). Documentado.
   if ((e->targetType == "int" || e->targetType == "char") && isNumeric(ot)) {
     e->inferredType = lastType = e->targetType;
     return 0;

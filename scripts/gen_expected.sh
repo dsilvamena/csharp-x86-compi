@@ -2,9 +2,7 @@
 # =============================================================================
 # gen_expected.sh — (Re)genera tests/expected/<name>.txt (correr en Linux).
 # =============================================================================
-# Compila y ejecuta cada input válido y guarda su salida como referencia. No
-# inventa salidas: captura la ejecución real del binario nativo. Las referencias
-# viven en tests/expected/ (versionadas) para sobrevivir a `make clean`.
+# Compila y ejecuta cada input válido y guarda su salida como referencia.
 # =============================================================================
 set -eu
 cd "$(dirname "$0")/.."

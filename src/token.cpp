@@ -48,6 +48,7 @@ std::string Token::typeName(Type t) {
     case OR: return "||";
     case NOT: return "!";
     case AMP: return "&";
+    case ARROW: return "=>";
     case ASSIGN: return "=";
     case LPAREN: return "(";
     case RPAREN: return ")";

@@ -52,6 +52,8 @@ private:
   Exp *parseUnary();
   Exp *parsePrimary();
   std::vector<Exp *> parseArgs();
+  bool looksLikeLambda();
+  Exp *parseLambda();
 
 public:
   explicit Parser(Lexer &lexer);

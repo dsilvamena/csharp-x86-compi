@@ -323,7 +323,16 @@ Stm *Parser::parsePrint() {
   return s;
 }
 
-Exp *Parser::parseExpr() { return parseLogicalOr(); }
+Exp *Parser::parseExpr() {
+  Exp *e = parseLogicalOr();
+  if (check(Token::ARROW)) {
+    delete e;
+    throw CompileError("semantico",
+        "lambda sin parentesis no soportada: usa '(Tipo x) => expr' con el tipo del parametro",
+        current.line, current.col);
+  }
+  return e;
+}
 
 Exp *Parser::parseLogicalOr() {
   Exp *e = parseLogicalAnd();
@@ -408,7 +417,48 @@ Exp *Parser::parseMultiplicative() {
   return e;
 }
 
+bool Parser::looksLikeLambda() {
+  if (!check(Token::LPAREN)) return false;
+  if (peek(1).type == Token::RPAREN)
+    return peek(2).type == Token::ARROW;
+  size_t i = 1;
+  for (;;) {
+    Token::Type t = peek(i).type;
+    if (t != Token::INT && t != Token::CHAR && t != Token::BOOL &&
+        t != Token::STRING && t != Token::ID)
+      return false;
+    i++;
+    while (peek(i).type == Token::MUL) i++;
+    if (peek(i).type != Token::ID) return false;
+    i++;
+    if (peek(i).type == Token::COMA) { i++; continue; }
+    if (peek(i).type == Token::RPAREN) { i++; break; }
+    return false;
+  }
+  return peek(i).type == Token::ARROW;
+}
+
+Exp *Parser::parseLambda() {
+  int L = current.line, C = current.col;
+  expect(Token::LPAREN, "se esperaba '(' al inicio de la lambda");
+  LambdaExp *lam = new LambdaExp();
+  if (!check(Token::RPAREN)) {
+    do {
+      Param p;
+      p.type = parseType();
+      p.name = expect(Token::ID, "se esperaba el nombre del parametro de la lambda").text;
+      lam->params.push_back(p);
+    } while (match(Token::COMA));
+  }
+  expect(Token::RPAREN, "se esperaba ')' tras los parametros de la lambda");
+  expect(Token::ARROW, "se esperaba '=>' en la lambda");
+  lam->body = parseExpr();
+  lam->line = L; lam->col = C;
+  return lam;
+}
+
 Exp *Parser::parseUnary() {
+  if (looksLikeLambda()) return parseLambda();
   // Cast explícito: '(' Tipo ')' Unary.  Se distingue de un paréntesis de
   // agrupación porque tras '(' viene un token de tipo primitivo (lookahead).
   if (check(Token::LPAREN)) {

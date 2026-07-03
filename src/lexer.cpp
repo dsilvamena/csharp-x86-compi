@@ -160,6 +160,7 @@ Token Lexer::nextToken() {
   switch (c) {
     case '=':
       if (peek() == '=') { advance(); advance(); return Token(Token::EQ, "==", L, C); }
+      if (peek() == '>') { advance(); advance(); return Token(Token::ARROW, "=>", L, C); }
       advance(); return Token(Token::ASSIGN, "=", L, C);
     case '!':
       if (peek() == '=') { advance(); advance(); return Token(Token::NE, "!=", L, C); }

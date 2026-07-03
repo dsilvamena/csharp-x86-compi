@@ -38,6 +38,12 @@ int NewArrayExp::accept(Visitor *v) { return v->visit(this); }
 int ArrayAccessExp::accept(Visitor *v) { return v->visit(this); }
 int NewMatrixExp::accept(Visitor *v) { return v->visit(this); }
 int MatrixAccessExp::accept(Visitor *v) { return v->visit(this); }
+int LambdaExp::accept(Visitor *) {
+  throw CompileError("semantico",
+      "lambda en posicion no soportada: solo se admite 'var f = (T x) => expr;' "
+      "invocada como f(...)",
+      line, col);
+}
 int Block::accept(Visitor *v) { return v->visit(this); }
 int VarDecStm::accept(Visitor *v) { return v->visit(this); }
 int AssignStm::accept(Visitor *v) { return v->visit(this); }

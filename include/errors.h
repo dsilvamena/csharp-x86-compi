@@ -15,7 +15,7 @@
 class CompileError : public std::runtime_error {
 public:
   std::string phase;    // "lexico" | "sintactico" | "semantico"
-  std::string message;  // mensaje crudo, sin el prefijo de formato (para --json)
+  std::string message;
   int line;
   int col;
 

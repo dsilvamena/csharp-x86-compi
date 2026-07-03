@@ -207,20 +207,17 @@ int GenCodeVisitor::visit(CastExp *e) {
     return 0;
   }
   e->operand->accept(this);
-  // (char): truncar al byte bajo (0..255). (int): el valor ya es de 64 bits.
   if (e->targetType == "char")
     code << "  movzbq %al, %rax\n";
   return 0;
 }
 
 int GenCodeVisitor::visit(AddressOfExp *e) {
-  // &x : dirección del slot de la variable en el frame.
   code << "  leaq " << varOffset[e->name] << "(%rbp), %rax\n";
   return 0;
 }
 
 int GenCodeVisitor::visit(DerefExp *e) {
-  // *p : evaluar el puntero y leer la memoria apuntada.
   e->ptr->accept(this);
   code << "  movq (%rax), %rax\n";
   return 0;
@@ -342,12 +339,11 @@ int GenCodeVisitor::visit(AssignStm *s) {
     return 0;
   }
   if (auto de = dynamic_cast<DerefExp *>(s->target)) {
-    // *p = v : spill de 'v', evaluar el puntero y escribir la memoria apuntada.
-    s->value->accept(this);                            // v en %rax
-    code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";  // spill v
-    de->ptr->accept(this);                             // dirección en %rax
-    code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";  // v -> %rcx
-    code << "  movq %rcx, (%rax)\n";                    // *p = v
+    s->value->accept(this);
+    code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
+    de->ptr->accept(this);
+    code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
+    code << "  movq %rcx, (%rax)\n";
     return 0;
   }
   return 0;
@@ -447,7 +443,7 @@ int GenCodeVisitor::visit(BreakStm *) {
 }
 
 int GenCodeVisitor::visit(UnsafeStm *s) {
-  s->body->accept(this);  // 'unsafe' no cambia el codegen, solo habilita punteros
+  s->body->accept(this);
   return 0;
 }
 

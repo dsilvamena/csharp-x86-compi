@@ -10,9 +10,7 @@
 #                      tests/expected/<name>.txt. Además se exige que --opt y
 #                      --no-opt produzcan la MISMA salida.
 #
-# Las salidas de referencia viven en tests/expected/ (versionadas), NO en``
-# outputs/, porque `make clean` borra outputs/. Los .s y binarios intermedios
-# sí se escriben en outputs/ (desechables).
+# Las salidas de referencia viven en tests/expected/.
 # =============================================================================
 set -u
 cd "$(dirname "$0")/.."

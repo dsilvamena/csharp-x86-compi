@@ -170,6 +170,15 @@ public:
   std::string name;
 };
 
+class LambdaExp : public Exp {
+public:
+  std::vector<Param> params;
+  Exp *body;
+  LambdaExp() : body(nullptr) {}
+  int accept(Visitor *v) override;
+  ~LambdaExp() override { delete body; }
+};
+
 class Stm {
 public:
   int line = 0, col = 0;
