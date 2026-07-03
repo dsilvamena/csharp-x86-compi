@@ -100,10 +100,13 @@
 
 \N{Multiplicative} & \Def & \N{Unary} \M{(}\M{(}\T{*} \Or \T{/} \Or \T{\%}\M{)} \N{Unary}\M{)*} \\[6pt]
 
-\N{Unary}          & \Def & \M{(}\T{-} \Or \T{!}\M{)} \N{Unary} \\
+\N{Unary}          & \Def & \N{Lambda} \\
+                   & \Or  & \M{(}\T{-} \Or \T{!}\M{)} \N{Unary} \\
                    & \Or  & \T{(} \N{Type} \T{)} \N{Unary} \\
                    & \Or  & \T{\&} \Tok{id} \Or \T{*} \N{Unary} \\
                    & \Or  & \N{Primary} \\[6pt]
+
+\N{Lambda}         & \Def & \T{(} \N{Params} \T{)} \T{=>} \N{Expr} \\[6pt]
 
 \N{Primary}        & \Def & \Tok{num} \Or \Tok{charlit} \Or \Tok{stringlit} \Or \T{true} \Or \T{false} \\
                    & \Or  & \T{new} \N{Type} \T{[} \N{Expr} \T{]} \\
