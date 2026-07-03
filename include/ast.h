@@ -335,5 +335,6 @@ public:
 };
 
 std::string printAst(Program *p);
+std::string astToDot(Program *p);
 
 #endif

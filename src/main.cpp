@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -39,12 +40,39 @@ static void dumpTokens(const std::string &source) {
   std::cout << "\n";
 }
 
+static bool commandInPath(const std::string &name) {
+  const char *pathEnv = std::getenv("PATH");
+  if (!pathEnv) return false;
+  std::string path(pathEnv);
+#ifdef _WIN32
+  char sep = ';';
+  std::vector<std::string> names = {name, name + ".exe"};
+#else
+  char sep = ':';
+  std::vector<std::string> names = {name};
+#endif
+  size_t start = 0;
+  while (start <= path.size()) {
+    size_t end = path.find(sep, start);
+    std::string dir = path.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (!dir.empty()) {
+      for (auto &candidate : names) {
+        if (fs::exists(fs::path(dir) / candidate)) return true;
+      }
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  return false;
+}
+
 int main(int argc, char **argv) {
   std::vector<std::string> files;
   std::string outArg;
   bool optimize = true;
   bool showTokens = false;
   bool showAst = false;
+  bool showAstDot = false;
 
   for (int i = 1; i < argc; i++) {
     std::string a = argv[i];
@@ -52,6 +80,7 @@ int main(int argc, char **argv) {
     else if (a == "--no-opt") optimize = false;
     else if (a == "--tokens") showTokens = true;
     else if (a == "--ast") showAst = true;
+    else if (a == "--ast-dot") showAstDot = true;
     else if (a == "-o" && i + 1 < argc) outArg = argv[++i];
     else if (a.rfind("--", 0) == 0) { std::cerr << "opcion desconocida: " << a << "\n"; return 2; }
     else files.push_back(a);
@@ -59,7 +88,7 @@ int main(int argc, char **argv) {
 
   if (files.empty()) {
     std::cerr << "Uso: " << argv[0]
-              << " <archivo.cs> [--opt|--no-opt] [--tokens] [--ast] [-o salida.s]\n";
+              << " <archivo.cs> [--opt|--no-opt] [--tokens] [--ast] [--ast-dot] [-o salida.s]\n";
     return 2;
   }
 
@@ -97,6 +126,33 @@ int main(int argc, char **argv) {
 
   if (showAst) {
     std::cout << "== AST ==\n" << printAst(program) << "\n";
+  }
+
+  if (showAstDot) {
+    try {
+      std::string stem = fs::path(inputPath).stem().string();
+      std::error_code ec;
+      fs::create_directories("outputs", ec);
+      std::string dotPath = "outputs/" + stem + "_ast.dot";
+      std::string pngPath = "outputs/" + stem + "_ast.png";
+      std::ofstream dotfile(dotPath, std::ios::binary);
+      if (!dotfile.is_open()) throw std::runtime_error("no se pudo crear: " + dotPath);
+      dotfile << astToDot(program);
+      dotfile.close();
+      std::cout << "AST DOT generado -> " << dotPath << "\n";
+      if (commandInPath("dot")) {
+        std::string cmd = "dot -Tpng \"" + dotPath + "\" -o \"" + pngPath + "\"";
+        int rc = std::system(cmd.c_str());
+        if (rc == 0) std::cout << "AST PNG generado -> " << pngPath << "\n";
+        else std::cout << "No se pudo generar el PNG con Graphviz dot.\n";
+      } else {
+        std::cout << "No se pudo generar el PNG con Graphviz dot.\n";
+      }
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << "\n";
+      delete program;
+      return 1;
+    }
   }
 
   std::string outputPath = outArg;

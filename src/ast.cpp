@@ -154,6 +154,184 @@ public:
     depth--;
   }
 };
+
+class DotPrinter {
+public:
+  std::ostringstream out;
+  int nextId = 0;
+
+  static std::string esc(const std::string &s) {
+    std::string r;
+    for (char ch : s) {
+      if (ch == '\\') r += "\\\\";
+      else if (ch == '"') r += "\\\"";
+      else if (ch == '\n') r += "\\n";
+      else if (ch == '\r') r += "\\r";
+      else if (ch == '\t') r += "\\t";
+      else r += ch;
+    }
+    return r;
+  }
+
+  int node(const std::string &label) {
+    int id = nextId++;
+    out << "  n" << id << " [label=\"" << esc(label) << "\"];\n";
+    return id;
+  }
+
+  void edge(int from, int to, const std::string &label = "") {
+    out << "  n" << from << " -> n" << to;
+    if (!label.empty()) out << " [label=\"" << esc(label) << "\"]";
+    out << ";\n";
+  }
+
+  int nullNode() {
+    return node("<null>");
+  }
+
+  int exp(Exp *e) {
+    if (!e) return nullNode();
+    if (auto n = dynamic_cast<NumberExp *>(e)) return node("NumberExp " + std::to_string(n->value));
+    if (auto b = dynamic_cast<BoolExp *>(e)) return node(std::string("BoolExp ") + (b->value ? "true" : "false"));
+    if (auto c = dynamic_cast<CharExp *>(e)) return node("CharExp " + std::to_string(c->value));
+    if (auto s = dynamic_cast<StringExp *>(e)) return node("StringExp \"" + s->value + "\"");
+    if (auto id = dynamic_cast<IdExp *>(e)) return node("IdExp " + id->name);
+    if (auto b = dynamic_cast<BinaryExp *>(e)) {
+      int id = node(std::string("BinaryExp ") + binaryOpName(b->op));
+      int left = exp(b->left), right = exp(b->right);
+      edge(id, left, "left");
+      edge(id, right, "right");
+      return id;
+    }
+    if (auto u = dynamic_cast<UnaryExp *>(e)) {
+      int id = node(std::string("UnaryExp ") + (u->op == NEG_OP ? "-" : "!"));
+      edge(id, exp(u->operand), "operand");
+      return id;
+    }
+    if (auto c = dynamic_cast<CallExp *>(e)) {
+      int id = node("CallExp " + c->name);
+      for (auto a : c->args) edge(id, exp(a), "arg");
+      return id;
+    }
+    if (auto f = dynamic_cast<FieldExp *>(e)) return node("FieldExp " + f->object + "." + f->field);
+    if (auto ca = dynamic_cast<CastExp *>(e)) {
+      int id = node("CastExp (" + ca->targetType + ")");
+      edge(id, exp(ca->operand), "operand");
+      return id;
+    }
+    if (auto ao = dynamic_cast<AddressOfExp *>(e)) return node("AddressOfExp &" + ao->name);
+    if (auto de = dynamic_cast<DerefExp *>(e)) {
+      int id = node("DerefExp *");
+      edge(id, exp(de->ptr), "ptr");
+      return id;
+    }
+    if (auto n = dynamic_cast<NewArrayExp *>(e)) {
+      int id = node("NewArrayExp " + n->elemType + "[]");
+      edge(id, exp(n->size), "size");
+      return id;
+    }
+    if (auto a = dynamic_cast<ArrayAccessExp *>(e)) {
+      int id = node("ArrayAccessExp " + a->name);
+      edge(id, exp(a->index), "index");
+      return id;
+    }
+    if (auto n = dynamic_cast<NewMatrixExp *>(e)) {
+      int id = node("NewMatrixExp " + n->elemType + "[,]");
+      edge(id, exp(n->rows), "rows");
+      edge(id, exp(n->cols), "cols");
+      return id;
+    }
+    if (auto m = dynamic_cast<MatrixAccessExp *>(e)) {
+      int id = node("MatrixAccessExp " + m->name);
+      edge(id, exp(m->rowIdx), "row");
+      edge(id, exp(m->colIdx), "col");
+      return id;
+    }
+    if (auto l = dynamic_cast<LambdaExp *>(e)) {
+      int id = node("LambdaExp");
+      for (auto &p : l->params) edge(id, node("Param " + p.type + " " + p.name), "param");
+      edge(id, exp(l->body), "body");
+      return id;
+    }
+    return node("<unknown exp>");
+  }
+
+  int stm(Stm *s) {
+    if (!s) return nullNode();
+    if (auto b = dynamic_cast<Block *>(s)) {
+      int id = node("Block");
+      for (auto st : b->stms) edge(id, stm(st));
+      return id;
+    }
+    if (auto v = dynamic_cast<VarDecStm *>(s)) {
+      int id = node("VarDecStm " + v->type + " " + v->name);
+      if (v->init) edge(id, exp(v->init), "init");
+      return id;
+    }
+    if (auto a = dynamic_cast<AssignStm *>(s)) {
+      int id = node("AssignStm");
+      edge(id, exp(a->target), "target");
+      edge(id, exp(a->value), "value");
+      return id;
+    }
+    if (auto e = dynamic_cast<ExprStm *>(s)) {
+      int id = node("ExprStm");
+      edge(id, exp(e->e));
+      return id;
+    }
+    if (auto p = dynamic_cast<PrintStm *>(s)) {
+      int id = node("PrintStm");
+      edge(id, exp(p->e));
+      return id;
+    }
+    if (auto i = dynamic_cast<IfStm *>(s)) {
+      int id = node("IfStm");
+      edge(id, exp(i->cond), "cond");
+      edge(id, stm(i->thenB), "then");
+      edge(id, stm(i->elseB), "else");
+      return id;
+    }
+    if (auto w = dynamic_cast<WhileStm *>(s)) {
+      int id = node("WhileStm");
+      edge(id, exp(w->cond), "cond");
+      edge(id, stm(w->body), "body");
+      return id;
+    }
+    if (auto d = dynamic_cast<DoWhileStm *>(s)) {
+      int id = node("DoWhileStm");
+      edge(id, stm(d->body), "body");
+      edge(id, exp(d->cond), "cond");
+      return id;
+    }
+    if (auto f = dynamic_cast<ForStm *>(s)) {
+      int id = node("ForStm");
+      edge(id, stm(f->init), "init");
+      edge(id, exp(f->cond), "cond");
+      edge(id, stm(f->update), "update");
+      edge(id, stm(f->body), "body");
+      return id;
+    }
+    if (auto r = dynamic_cast<ReturnStm *>(s)) {
+      int id = node("ReturnStm");
+      if (r->e) edge(id, exp(r->e));
+      return id;
+    }
+    if (dynamic_cast<BreakStm *>(s)) return node("BreakStm");
+    if (auto u = dynamic_cast<UnsafeStm *>(s)) {
+      int id = node("UnsafeStm");
+      edge(id, stm(u->body), "body");
+      return id;
+    }
+    return node("<unknown stm>");
+  }
+
+  int method(MethodDecl *m) {
+    int id = node("MethodDecl " + m->retType + " " + m->name);
+    for (auto &p : m->params) edge(id, node("Param " + p.type + " " + p.name), "param");
+    edge(id, stm(m->body), "body");
+    return id;
+  }
+};
 }
 
 std::string printAst(Program *p) {
@@ -173,5 +351,24 @@ std::string printAst(Program *p) {
     pr.depth--;
   }
   pr.depth--;
+  return pr.out.str();
+}
+
+std::string astToDot(Program *p) {
+  DotPrinter pr;
+  pr.out << "digraph AST {\n";
+  pr.out << "  node [shape=box];\n";
+  int root = pr.node("Program");
+  for (auto s : p->structs) {
+    int sid = pr.node("StructDecl " + s->name);
+    pr.edge(root, sid);
+    for (auto &f : s->fields) pr.edge(sid, pr.node("Field " + f.type + " " + f.name));
+  }
+  for (auto c : p->classes) {
+    int cid = pr.node("ClassDecl " + c->name);
+    pr.edge(root, cid);
+    for (auto m : c->methods) pr.edge(cid, pr.method(m));
+  }
+  pr.out << "}\n";
   return pr.out.str();
 }

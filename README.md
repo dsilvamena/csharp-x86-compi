@@ -95,6 +95,7 @@ Opciones útiles del compilador:
 ./build/compiler inputs/08_pointers.cs --opt
 ./build/compiler inputs/08_pointers.cs --no-opt
 ./build/compiler inputs/08_pointers.cs --tokens --ast
+./build/compiler inputs/08_pointers.cs --ast-dot
 ./build/compiler inputs/08_pointers.cs -o outputs/custom_name.s
 ```
 
