@@ -13,7 +13,8 @@ Docker para ensamblar y ejecutar dentro de un contenedor Linux.
 
 - Parser descendente recursivo para un subconjunto documentado de C#.
 - Tipos primitivos (`int`, `bool`, `char`, `string`), `struct`, arreglos 1D/2D,
-  cast explícito `(int)`/`(char)` y punteros `unsafe` (`int*`, `&x`, `*p`).
+  cast explícito `(int)`/`(char)`, punteros `unsafe` (`int*`, `&x`, `*p`) e
+  inferencia de tipos con `var` (resuelta desde el inicializador).
 - Verificación semántica con tablas de símbolos y alcances anidados.
 - Generación de código x86-64 GNU/AT&T.
 - Optimizaciones opcionales activadas por defecto:

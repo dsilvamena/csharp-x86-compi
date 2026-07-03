@@ -224,21 +224,30 @@ int TypeCheckerVisitor::visit(VarDecStm *s) {
   if (env.exists_in_current(s->name))
     throw CompileError("semantico", "redeclaracion de '" + s->name + "' en el mismo scope",
                        s->line, s->col);
-  if (s->type == "void")
-    throw CompileError("semantico", "una variable no puede ser void", s->line, s->col);
-  if (!isType(s->type))
-    throw CompileError("semantico", "tipo desconocido: '" + s->type + "'", s->line, s->col);
-  if (s->init) {
+  std::string declared = s->type;
+  if (s->inferred) {
+    if (!s->init)
+      throw CompileError("semantico", "'var' requiere inicializador", s->line, s->col);
     std::string it = typeOf(s->init);
-    if (!assignable(s->type, it))
-      throw CompileError("semantico", "no se puede asignar " + it + " a variable " + s->type,
+    if (it == "void")
+      throw CompileError("semantico", "no se puede inferir 'var' desde void", s->line, s->col);
+    declared = it;
+    s->type = it;
+  } else if (s->init) {
+    std::string it = typeOf(s->init);
+    if (!assignable(declared, it))
+      throw CompileError("semantico", "no se puede asignar " + it + " a variable " + declared,
                          s->line, s->col);
   }
-  if (s->type.size() >= 3 && s->type.substr(s->type.size() - 3) == "[,]" &&
+  if (declared == "void")
+    throw CompileError("semantico", "una variable no puede ser void", s->line, s->col);
+  if (!isType(declared))
+    throw CompileError("semantico", "tipo desconocido: '" + declared + "'", s->line, s->col);
+  if (declared.size() >= 3 && declared.substr(declared.size() - 3) == "[,]" &&
       !dynamic_cast<NewMatrixExp *>(s->init))
     throw CompileError("semantico", "una matriz 2D debe inicializarse con 'new T[r,c]'",
                        s->line, s->col);
-  env.add_var(s->name, s->type);
+  env.add_var(s->name, declared);
   return 0;
 }
 

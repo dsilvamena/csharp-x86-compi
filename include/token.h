@@ -7,7 +7,7 @@
 class Token {
 public:
   enum Type {
-    CLASS, STATIC, STRUCT, UNSAFE, NEW,
+    CLASS, STATIC, STRUCT, UNSAFE, NEW, VAR,
     INT, BOOL, CHAR, STRING, VOID,
     IF, ELSE, WHILE, FOR, DO, BREAK, RETURN,
     TRUE, FALSE,

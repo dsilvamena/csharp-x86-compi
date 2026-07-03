@@ -52,7 +52,7 @@ bool Parser::isTypeStart() const {
 }
 
 bool Parser::looksLikeVarDecl() {
-  if (isTypeStart()) return true;
+  if (isTypeStart() || check(Token::VAR)) return true;
   if (check(Token::ID)) {
     if (structNames.count(current.text)) return true;
     if (peek().type == Token::ID) return true;
@@ -183,11 +183,20 @@ Stm *Parser::parseStatement() {
 
 Stm *Parser::parseVarDecNoSemi() {
   int L = current.line, C = current.col;
-  std::string type = parseType();
+  bool inferred = false;
+  std::string type;
+  if (match(Token::VAR)) {
+    inferred = true;
+    type = "var";
+  } else {
+    type = parseType();
+  }
   Token name = expect(Token::ID, "se esperaba el nombre de la variable");
   Exp *init = nullptr;
   if (match(Token::ASSIGN)) init = parseExpr();
-  VarDecStm *vd = new VarDecStm(type, name.text, init);
+  if (inferred && !init)
+    throw CompileError("sintactico", "'var' requiere un inicializador", L, C);
+  VarDecStm *vd = new VarDecStm(type, name.text, init, inferred);
   vd->line = L;
   vd->col = C;
   return vd;

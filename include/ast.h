@@ -189,8 +189,9 @@ public:
   std::string type;
   std::string name;
   Exp *init;
-  VarDecStm(std::string t, std::string n, Exp *i)
-      : type(std::move(t)), name(std::move(n)), init(i) {}
+  bool inferred;
+  VarDecStm(std::string t, std::string n, Exp *i, bool inf)
+      : type(std::move(t)), name(std::move(n)), init(i), inferred(inf) {}
   int accept(Visitor *v) override;
   ~VarDecStm() override { delete init; }
 };

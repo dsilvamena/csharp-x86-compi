@@ -13,6 +13,7 @@ std::string Token::typeName(Type t) {
     case STRUCT: return "struct";
     case UNSAFE: return "unsafe";
     case NEW: return "new";
+    case VAR: return "var";
     case INT: return "int";
     case BOOL: return "bool";
     case CHAR: return "char";
