@@ -132,9 +132,9 @@ int main(int argc, char **argv) {
     try {
       std::string stem = fs::path(inputPath).stem().string();
       std::error_code ec;
-      fs::create_directories("outputs", ec);
-      std::string dotPath = "outputs/" + stem + "_ast.dot";
-      std::string pngPath = "outputs/" + stem + "_ast.png";
+      fs::create_directories("outputs/ast", ec);
+      std::string dotPath = "outputs/ast/" + stem + "_ast.dot";
+      std::string pngPath = "outputs/ast/" + stem + "_ast.png";
       std::ofstream dotfile(dotPath, std::ios::binary);
       if (!dotfile.is_open()) throw std::runtime_error("no se pudo crear: " + dotPath);
       dotfile << astToDot(program);
@@ -156,11 +156,13 @@ int main(int argc, char **argv) {
   }
 
   std::string outputPath = outArg;
+  bool defaultOutput = outputPath.empty();
   if (outputPath.empty()) {
     std::string stem = fs::path(inputPath).stem().string();
     std::error_code ec;
-    fs::create_directories("outputs", ec);
-    outputPath = "outputs/" + stem + ".s";
+    fs::create_directories("outputs/asm", ec);
+    fs::create_directories("outputs/bin", ec);
+    outputPath = "outputs/asm/" + stem + ".s";
   }
 
   int foldedCount = 0, peepRemoved = 0;
@@ -179,6 +181,10 @@ int main(int argc, char **argv) {
 
     if (optimize) asmText = peephole(asmText, &peepRemoved);
 
+    std::error_code ec;
+    fs::path outParent = fs::path(outputPath).parent_path();
+    if (!outParent.empty()) fs::create_directories(outParent, ec);
+
     std::ofstream outfile(outputPath, std::ios::binary);
     if (!outfile.is_open()) throw std::runtime_error("no se pudo crear: " + outputPath);
     outfile << asmText;
@@ -191,7 +197,9 @@ int main(int argc, char **argv) {
 
   delete program;
 
-  std::string bin = fs::path(outputPath).replace_extension("").string();
+  std::string bin = defaultOutput
+                        ? ("outputs/bin/" + fs::path(inputPath).stem().string())
+                        : fs::path(outputPath).replace_extension("").string();
   std::cout << "Compilacion exitosa -> " << outputPath
             << (optimize ? "  [--opt]" : "  [--no-opt]") << "\n";
   if (optimize)

@@ -27,7 +27,7 @@ case "$cmd" in
   run)
     src="${2:?uso: scripts/docker.sh run inputs/archivo.cs}"
     name="$(basename "$src" .cs)"
-    "${DOCK[@]}" bash -lc "$REBUILD && mkdir -p outputs && $DOCKER_COMPILER '$src' -o outputs/$name.s && g++ -no-pie outputs/$name.s -o outputs/$name && echo '----- salida -----' && ./outputs/$name"
+    "${DOCK[@]}" bash -lc "$REBUILD && mkdir -p outputs/asm outputs/bin && $DOCKER_COMPILER '$src' -o outputs/asm/$name.s && g++ -no-pie outputs/asm/$name.s -o outputs/bin/$name && echo '----- salida -----' && ./outputs/bin/$name"
     ;;
   shell) docker run --rm -it --platform linux/amd64 -v "$HERE":/work -w /work "$IMG" bash ;;
   *) echo "comando desconocido: $cmd (test|gen|run|shell)"; exit 2 ;;

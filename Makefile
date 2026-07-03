@@ -19,14 +19,14 @@ $(BUILD_DIR):
 run: $(BIN)
 	./$(BIN) $(FILE) $(ARGS)
 
-# Compila todos los inputs/*.cs validos -> outputs/*.s (nativo, funciona en macOS)
+# Compila todos los inputs/*.cs validos -> outputs/asm/*.s (nativo, funciona en macOS)
 compile-all: $(BIN)
 	@for f in $(VALID_INPUTS); do echo "== $$f =="; ./$(BIN) $$f; done
 
-# Ensambla y ejecuta todos los outputs/*.s en Docker (gcc:13, linux/amd64)
+# Ensambla y ejecuta todos los outputs/asm/*.s en Docker (gcc:13, linux/amd64)
 run-all: compile-all
 	docker run --rm --platform linux/amd64 -v "$(PWD)/outputs:/w" gcc:13 bash -c \
-	  'cd /w && for s in $(notdir $(VALID_INPUTS:.cs=.s)); do b=$${s%.s}; g++ -no-pie $$s -o $$b && echo "== $$b ==" && ./$$b; done'
+	  'cd /w && mkdir -p bin && for s in $(notdir $(VALID_INPUTS:.cs=.s)); do b=$${s%.s}; g++ -no-pie asm/$$s -o bin/$$b && echo "== $$b ==" && ./bin/$$b; done'
 
 # Suite de pruebas: compila, ensambla, ejecuta y compara contra tests/expected/.
 # En Linux corre directo; en macOS usa: scripts/docker.sh test

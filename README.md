@@ -31,7 +31,10 @@ src/             Implementación en C++17
 inputs/          Programas .cs válidos e inválidos de ejemplo
 tests/expected/  Salidas esperadas versionadas para programas válidos
 scripts/         Utilidades de Docker, pruebas y salidas esperadas
-outputs/         Ensamblador y binarios generados, ignorados por git
+outputs/         Archivos generados, ignorados por git
+  asm/           Ensamblador generado
+  bin/           Binarios enlazados
+  ast/           AST en DOT y PNG
 build/           Binario nativo del compilador, ignorado por git
 .docker-build/   Binario Linux usado por scripts/docker.sh, ignorado por git
 ```
@@ -86,7 +89,7 @@ Linux y macOS:
 El comando genera:
 
 ```text
-outputs/08_pointers.s
+outputs/asm/08_pointers.s
 ```
 
 Opciones útiles del compilador:
@@ -96,7 +99,7 @@ Opciones útiles del compilador:
 ./build/compiler inputs/08_pointers.cs --no-opt
 ./build/compiler inputs/08_pointers.cs --tokens --ast
 ./build/compiler inputs/08_pointers.cs --ast-dot
-./build/compiler inputs/08_pointers.cs -o outputs/custom_name.s
+./build/compiler inputs/08_pointers.cs -o outputs/asm/custom_name.s
 ```
 
 `--opt` es el modo por defecto.
@@ -107,8 +110,8 @@ Linux:
 
 ```bash
 ./build/compiler inputs/08_pointers.cs
-g++ -no-pie outputs/08_pointers.s -o outputs/08_pointers
-./outputs/08_pointers
+g++ -no-pie outputs/asm/08_pointers.s -o outputs/bin/08_pointers
+./outputs/bin/08_pointers
 ```
 
 macOS:
@@ -126,8 +129,9 @@ Linux:
 
 ```bash
 make compile-all
-for s in outputs/*.s; do
-  b="${s%.s}"
+mkdir -p outputs/bin
+for s in outputs/asm/*.s; do
+  b="outputs/bin/$(basename "${s%.s}")"
   g++ -no-pie "$s" -o "$b"
   "$b"
 done

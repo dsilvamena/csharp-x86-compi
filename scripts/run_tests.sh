@@ -21,15 +21,15 @@ INPUT_DIR="${INPUT_DIR:-inputs}"
 if [ ! -x "$COMPILER" ]; then
   echo "compilando..."; make >/dev/null || { echo "build fallo"; exit 1; }
 fi
-mkdir -p outputs tests/expected
+mkdir -p outputs/asm outputs/bin tests/expected
 
 PASS=0; FAIL=0
 
 run_one() {  # <name> <src> <mode>
   local name="$1" src="$2" mode="$3"
-  "$COMPILER" "$src" "$mode" -o "outputs/$name.s" >/dev/null 2>/tmp/cerr || { echo "FAIL $name [$mode] (compile)"; cat /tmp/cerr; return 1; }
-  g++ -no-pie "outputs/$name.s" -o "outputs/$name" 2>/tmp/aerr || { echo "FAIL $name [$mode] (assemble)"; cat /tmp/aerr; return 1; }
-  ./outputs/$name
+  "$COMPILER" "$src" "$mode" -o "outputs/asm/$name.s" >/dev/null 2>/tmp/cerr || { echo "FAIL $name [$mode] (compile)"; cat /tmp/cerr; return 1; }
+  g++ -no-pie "outputs/asm/$name.s" -o "outputs/bin/$name" 2>/tmp/aerr || { echo "FAIL $name [$mode] (assemble)"; cat /tmp/aerr; return 1; }
+  ./outputs/bin/$name
 }
 
 for src in "$INPUT_DIR"/*.cs; do
