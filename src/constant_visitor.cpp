@@ -1,20 +1,36 @@
 #include "visitor.h"
 #include "ast.h"
+#include <cstdint>
+#include <limits>
 
 namespace {
 bool evalBinary(long l, long r, BinaryOp op, long &out) {
+  int32_t a = static_cast<int32_t>(l);
+  int32_t b = static_cast<int32_t>(r);
   switch (op) {
-    case ADD_OP: out = l + r; return true;
-    case SUB_OP: out = l - r; return true;
-    case MUL_OP: out = l * r; return true;
-    case DIV_OP: if (r == 0) return false; out = l / r; return true;
-    case MOD_OP: if (r == 0) return false; out = l % r; return true;
-    case LT_OP: out = l < r; return true;
-    case GT_OP: out = l > r; return true;
-    case LE_OP: out = l <= r; return true;
-    case GE_OP: out = l >= r; return true;
-    case EQ_OP: out = l == r; return true;
-    case NE_OP: out = l != r; return true;
+    case ADD_OP:
+      out = static_cast<int32_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b));
+      return true;
+    case SUB_OP:
+      out = static_cast<int32_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b));
+      return true;
+    case MUL_OP:
+      out = static_cast<int32_t>(static_cast<uint32_t>(a) * static_cast<uint32_t>(b));
+      return true;
+    case DIV_OP:
+      if (b == 0 || (a == std::numeric_limits<int32_t>::min() && b == -1)) return false;
+      out = a / b;
+      return true;
+    case MOD_OP:
+      if (b == 0 || (a == std::numeric_limits<int32_t>::min() && b == -1)) return false;
+      out = a % b;
+      return true;
+    case LT_OP: out = a < b; return true;
+    case GT_OP: out = a > b; return true;
+    case LE_OP: out = a <= b; return true;
+    case GE_OP: out = a >= b; return true;
+    case EQ_OP: out = a == b; return true;
+    case NE_OP: out = a != b; return true;
     case AND_OP: out = (l != 0) && (r != 0); return true;
     case OR_OP: out = (l != 0) || (r != 0); return true;
   }
@@ -45,8 +61,10 @@ int ConstantVisitor::visit(UnaryExp *e) {
   e->operand->accept(this);
   if (e->operand->isConstant) {
     e->isConstant = true;
-    e->constantValue = e->op == NEG_OP ? -e->operand->constantValue
-                                       : (e->operand->constantValue == 0);
+    int32_t v = static_cast<int32_t>(e->operand->constantValue);
+    e->constantValue = e->op == NEG_OP
+        ? static_cast<int32_t>(0u - static_cast<uint32_t>(v))
+        : (v == 0);
     folded++;
   }
   return 0;
@@ -60,7 +78,7 @@ int ConstantVisitor::visit(CastExp *e) {
   e->isConstant = false;
   if (!e->operand->isConstant) return 0;
   long v = e->operand->constantValue;
-  e->constantValue = (e->targetType == "char") ? (v & 0xFF) : v;  // (int): identidad
+  e->constantValue = (e->targetType == "char") ? (v & 0xFF) : static_cast<int32_t>(v);
   e->isConstant = true;
   folded++;
   return 0;

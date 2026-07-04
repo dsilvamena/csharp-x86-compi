@@ -1,11 +1,22 @@
 #include "visitor.h"
 #include "ast.h"
 #include "errors.h"
+#include <cstdint>
 
 namespace {
 const char *ARG_REGS[6] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+const char *ARG_REGS32[6] = {"%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"};
 
 int align16(int n) { return (n + 15) & ~15; }
+int alignTo(int n, int a) { return (n + a - 1) & ~(a - 1); }
+
+std::string stackAddr(int off) { return std::to_string(off) + "(%rbp)"; }
+std::string ptrAddr(int off, const std::string &base = "%rax") {
+  return std::to_string(off) + "(" + base + ")";
+}
+std::string indexedAddr(const std::string &base, const std::string &index, int scale) {
+  return "(" + base + "," + index + "," + std::to_string(scale) + ")";
+}
 
 std::string escapeForAsm(const std::string &s) {
   std::string out;
@@ -28,6 +39,47 @@ std::string GenCodeVisitor::newLabel(const std::string &base) {
 }
 
 std::string GenCodeVisitor::exprType(Exp *e) const { return e->inferredType; }
+
+bool GenCodeVisitor::isPrimitive32(const std::string &type) const {
+  return type == "int" || type == "char" || type == "bool";
+}
+
+int GenCodeVisitor::storageSize(const std::string &type) const {
+  return isPrimitive32(type) ? 4 : 8;
+}
+
+int GenCodeVisitor::storageAlign(const std::string &type) const {
+  int size = storageSize(type);
+  return size < 8 ? size : 8;
+}
+
+int GenCodeVisitor::allocateSlot(const std::string &type) {
+  int used = -currentOffset;
+  used = alignTo(used, storageAlign(type));
+  used += storageSize(type);
+  currentOffset = -used;
+  return currentOffset;
+}
+
+void GenCodeVisitor::emitIntConst(long value) {
+  code << "  movl $" << static_cast<int32_t>(value) << ", %eax\n";
+}
+
+void GenCodeVisitor::emitLoad(const std::string &type, const std::string &addr) {
+  if (isPrimitive32(type)) code << "  movslq " << addr << ", %rax\n";
+  else code << "  movq " << addr << ", %rax\n";
+}
+
+void GenCodeVisitor::emitStore(const std::string &type, const std::string &addr,
+                               const std::string &reg64, const std::string &reg32) {
+  if (isPrimitive32(type)) code << "  movl " << reg32 << ", " << addr << "\n";
+  else code << "  movq " << reg64 << ", " << addr << "\n";
+}
+
+void GenCodeVisitor::emitZeroStore(const std::string &type, const std::string &addr) {
+  if (isPrimitive32(type)) code << "  movl $0, " << addr << "\n";
+  else code << "  movq $0, " << addr << "\n";
+}
 
 namespace {
 void collectExp(Exp *e, std::vector<std::string> &lits);
@@ -95,34 +147,37 @@ int GenCodeVisitor::countVars(Stm *s) {
   return 0;
 }
 
-int GenCodeVisitor::visit(NumberExp *e) { code << "  movq $" << e->value << ", %rax\n"; return 0; }
-int GenCodeVisitor::visit(BoolExp *e) { code << "  movq $" << (e->value ? 1 : 0) << ", %rax\n"; return 0; }
-int GenCodeVisitor::visit(CharExp *e) { code << "  movq $" << e->value << ", %rax\n"; return 0; }
+int GenCodeVisitor::visit(NumberExp *e) { emitIntConst(e->value); return 0; }
+int GenCodeVisitor::visit(BoolExp *e) { emitIntConst(e->value ? 1 : 0); return 0; }
+int GenCodeVisitor::visit(CharExp *e) { emitIntConst(e->value); return 0; }
 int GenCodeVisitor::visit(StringExp *e) { code << "  leaq .Lstr" << e->labelId << "(%rip), %rax\n"; return 0; }
-int GenCodeVisitor::visit(IdExp *e) { code << "  movq " << varOffset[e->name] << "(%rbp), %rax\n"; return 0; }
+int GenCodeVisitor::visit(IdExp *e) {
+  emitLoad(varType[e->name], stackAddr(varOffset[e->name]));
+  return 0;
+}
 
 int GenCodeVisitor::visit(BinaryExp *e) {
   if (optimize && e->isConstant) {
-    code << "  movq $" << e->constantValue << ", %rax\n";
+    emitIntConst(e->constantValue);
     return 0;
   }
   if (e->op == AND_OP || e->op == OR_OP) {
     std::string lend = newLabel("bool_end");
     std::string lset = newLabel("bool_set");
     e->left->accept(this);
-    code << "  cmpq $0, %rax\n";
+    code << "  cmpl $0, %eax\n";
     if (e->op == AND_OP) {
       code << "  je " << lset << "\n";
       e->right->accept(this);
-      code << "  cmpq $0, %rax\n  je " << lset << "\n";
-      code << "  movq $1, %rax\n  jmp " << lend << "\n";
-      code << lset << ":\n  movq $0, %rax\n";
+      code << "  cmpl $0, %eax\n  je " << lset << "\n";
+      code << "  movl $1, %eax\n  jmp " << lend << "\n";
+      code << lset << ":\n  movl $0, %eax\n";
     } else {
       code << "  jne " << lset << "\n";
       e->right->accept(this);
-      code << "  cmpq $0, %rax\n  jne " << lset << "\n";
-      code << "  movq $0, %rax\n  jmp " << lend << "\n";
-      code << lset << ":\n  movq $1, %rax\n";
+      code << "  cmpl $0, %eax\n  jne " << lset << "\n";
+      code << "  movl $0, %eax\n  jmp " << lend << "\n";
+      code << lset << ":\n  movl $1, %eax\n";
     }
     code << lend << ":\n";
     return 0;
@@ -139,13 +194,14 @@ int GenCodeVisitor::visit(BinaryExp *e) {
   code << "  movq %rax, %rcx\n";
   code << "  movq (%rsp), %rax\n  addq $16, %rsp\n";
   switch (e->op) {
-    case ADD_OP: code << "  addq %rcx, %rax\n"; break;
-    case SUB_OP: code << "  subq %rcx, %rax\n"; break;
-    case MUL_OP: code << "  imulq %rcx, %rax\n"; break;
-    case DIV_OP: code << "  cqto\n  idivq %rcx\n"; break;
-    case MOD_OP: code << "  cqto\n  idivq %rcx\n  movq %rdx, %rax\n"; break;
+    case ADD_OP: code << "  addl %ecx, %eax\n"; break;
+    case SUB_OP: code << "  subl %ecx, %eax\n"; break;
+    case MUL_OP: code << "  imull %ecx, %eax\n"; break;
+    case DIV_OP: code << "  cltd\n  idivl %ecx\n"; break;
+    case MOD_OP: code << "  cltd\n  idivl %ecx\n  movl %edx, %eax\n"; break;
     case LT_OP: case GT_OP: case LE_OP: case GE_OP: case EQ_OP: case NE_OP: {
-      code << "  cmpq %rcx, %rax\n";
+      bool cmp32 = isPrimitive32(exprType(e->left)) && isPrimitive32(exprType(e->right));
+      code << "  " << (cmp32 ? "cmpl %ecx, %eax" : "cmpq %rcx, %rax") << "\n";
       const char *set = "sete";
       switch (e->op) {
         case LT_OP: set = "setl"; break;
@@ -156,7 +212,7 @@ int GenCodeVisitor::visit(BinaryExp *e) {
         case NE_OP: set = "setne"; break;
         default: break;
       }
-      code << "  " << set << " %al\n  movzbq %al, %rax\n";
+      code << "  " << set << " %al\n  movzbl %al, %eax\n";
       break;
     }
     default: break;
@@ -166,12 +222,12 @@ int GenCodeVisitor::visit(BinaryExp *e) {
 
 int GenCodeVisitor::visit(UnaryExp *e) {
   if (optimize && e->isConstant) {
-    code << "  movq $" << e->constantValue << ", %rax\n";
+    emitIntConst(e->constantValue);
     return 0;
   }
   e->operand->accept(this);
-  if (e->op == NEG_OP) code << "  negq %rax\n";
-  else code << "  cmpq $0, %rax\n  sete %al\n  movzbq %al, %rax\n";
+  if (e->op == NEG_OP) code << "  negl %eax\n";
+  else code << "  cmpl $0, %eax\n  sete %al\n  movzbl %al, %eax\n";
   return 0;
 }
 
@@ -195,20 +251,21 @@ int GenCodeVisitor::visit(CallExp *e) {
 }
 
 int GenCodeVisitor::visit(FieldExp *e) {
-  int idx = structFieldIndex[varType[e->object]][e->field];
-  code << "  movq " << varOffset[e->object] << "(%rbp), %rax\n";
-  code << "  movq " << (idx * 8) << "(%rax), %rax\n";
+  const std::string &objType = varType[e->object];
+  int off = structFieldOffset[objType][e->field];
+  emitLoad(objType, stackAddr(varOffset[e->object]));
+  emitLoad(structFieldType[objType][e->field], ptrAddr(off));
   return 0;
 }
 
 int GenCodeVisitor::visit(CastExp *e) {
   if (optimize && e->isConstant) {
-    code << "  movq $" << e->constantValue << ", %rax\n";
+    emitIntConst(e->constantValue);
     return 0;
   }
   e->operand->accept(this);
   if (e->targetType == "char")
-    code << "  movzbq %al, %rax\n";
+    code << "  movzbl %al, %eax\n";
   return 0;
 }
 
@@ -219,32 +276,35 @@ int GenCodeVisitor::visit(AddressOfExp *e) {
 
 int GenCodeVisitor::visit(DerefExp *e) {
   e->ptr->accept(this);
-  code << "  movq (%rax), %rax\n";
+  emitLoad(exprType(e), "(%rax)");
   return 0;
 }
 
 int GenCodeVisitor::visit(NewArrayExp *e) {
   e->size->accept(this);
-  code << "  movq $8, %rcx\n  imulq %rcx, %rax\n";
+  code << "  movslq %eax, %rax\n";
+  code << "  imulq $" << storageSize(e->elemType) << ", %rax, %rax\n";
   code << "  movq %rax, %rdi\n  call malloc@PLT\n";
   return 0;
 }
 
 int GenCodeVisitor::visit(ArrayAccessExp *e) {
   e->index->accept(this);
-  code << "  movq %rax, %rcx\n";
-  code << "  movq " << varOffset[e->name] << "(%rbp), %rax\n";
-  code << "  movq (%rax, %rcx, 8), %rax\n";
+  code << "  movslq %eax, %rcx\n";
+  emitLoad(varType[e->name], stackAddr(varOffset[e->name]));
+  emitLoad(exprType(e), indexedAddr("%rax", "%rcx", storageSize(exprType(e))));
   return 0;
 }
 
 int GenCodeVisitor::visit(NewMatrixExp *e) {
   e->cols->accept(this);
+  code << "  movslq %eax, %rax\n";
   code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
   e->rows->accept(this);
+  code << "  movslq %eax, %rax\n";
   code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
   code << "  imulq %rcx, %rax\n";
-  code << "  movq $8, %rcx\n  imulq %rcx, %rax\n";
+  code << "  imulq $" << storageSize(e->elemType) << ", %rax, %rax\n";
   code << "  movq %rax, %rdi\n  call malloc@PLT\n";
   return 0;
 }
@@ -252,9 +312,11 @@ int GenCodeVisitor::visit(NewMatrixExp *e) {
 void GenCodeVisitor::emitMatrixLinearIndex(MatrixAccessExp *e) {
   long cols = matrixCols.count(e->name) ? matrixCols[e->name] : 0;
   e->rowIdx->accept(this);
+  code << "  movslq %eax, %rax\n";
   code << "  movq $" << cols << ", %rcx\n  imulq %rcx, %rax\n";
   code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
   e->colIdx->accept(this);
+  code << "  movslq %eax, %rax\n";
   code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
   code << "  addq %rcx, %rax\n";
 }
@@ -262,8 +324,8 @@ void GenCodeVisitor::emitMatrixLinearIndex(MatrixAccessExp *e) {
 int GenCodeVisitor::visit(MatrixAccessExp *e) {
   emitMatrixLinearIndex(e);
   code << "  movq %rax, %rcx\n";
-  code << "  movq " << varOffset[e->name] << "(%rbp), %rax\n";
-  code << "  movq (%rax, %rcx, 8), %rax\n";
+  emitLoad(varType[e->name], stackAddr(varOffset[e->name]));
+  emitLoad(exprType(e), indexedAddr("%rax", "%rcx", storageSize(exprType(e))));
   return 0;
 }
 
@@ -284,8 +346,7 @@ int GenCodeVisitor::visit(Block *s) {
 }
 
 int GenCodeVisitor::visit(VarDecStm *s) {
-  int off = currentOffset;
-  currentOffset -= 8;
+  int off = allocateSlot(s->type);
   varOffset[s->name] = off;
   varType[s->name] = s->type;
   if (auto nm = dynamic_cast<NewMatrixExp *>(s->init))
@@ -293,13 +354,13 @@ int GenCodeVisitor::visit(VarDecStm *s) {
       matrixCols[s->name] = c->value;
   if (s->init) {
     s->init->accept(this);
-    code << "  movq %rax, " << off << "(%rbp)\n";
+    emitStore(s->type, stackAddr(off));
   } else if (structFieldIndex.count(s->type)) {
-    code << "  movq $" << (structSize[s->type] * 8) << ", %rdi\n";
+    code << "  movq $" << structSizeBytes[s->type] << ", %rdi\n";
     code << "  call malloc@PLT\n";
-    code << "  movq %rax, " << off << "(%rbp)\n";
+    emitStore(s->type, stackAddr(off));
   } else {
-    code << "  movq $0, " << off << "(%rbp)\n";
+    emitZeroStore(s->type, stackAddr(off));
   }
   return 0;
 }
@@ -307,25 +368,27 @@ int GenCodeVisitor::visit(VarDecStm *s) {
 int GenCodeVisitor::visit(AssignStm *s) {
   if (auto t = dynamic_cast<IdExp *>(s->target)) {
     s->value->accept(this);
-    code << "  movq %rax, " << varOffset[t->name] << "(%rbp)\n";
+    emitStore(varType[t->name], stackAddr(varOffset[t->name]));
     return 0;
   }
   if (auto f = dynamic_cast<FieldExp *>(s->target)) {
-    int idx = structFieldIndex[varType[f->object]][f->field];
+    const std::string &objType = varType[f->object];
+    int off = structFieldOffset[objType][f->field];
+    const std::string &fieldType = structFieldType[objType][f->field];
     s->value->accept(this);
     code << "  movq %rax, %rcx\n";
-    code << "  movq " << varOffset[f->object] << "(%rbp), %rax\n";
-    code << "  movq %rcx, " << (idx * 8) << "(%rax)\n";
+    emitLoad(objType, stackAddr(varOffset[f->object]));
+    emitStore(fieldType, ptrAddr(off), "%rcx", "%ecx");
     return 0;
   }
   if (auto a = dynamic_cast<ArrayAccessExp *>(s->target)) {
     s->value->accept(this);
     code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
     a->index->accept(this);
-    code << "  movq %rax, %rcx\n";
-    code << "  movq " << varOffset[a->name] << "(%rbp), %rax\n";
+    code << "  movslq %eax, %rcx\n";
+    emitLoad(varType[a->name], stackAddr(varOffset[a->name]));
     code << "  movq (%rsp), %rdx\n  addq $16, %rsp\n";
-    code << "  movq %rdx, (%rax, %rcx, 8)\n";
+    emitStore(exprType(a), indexedAddr("%rax", "%rcx", storageSize(exprType(a))), "%rdx", "%edx");
     return 0;
   }
   if (auto m = dynamic_cast<MatrixAccessExp *>(s->target)) {
@@ -333,9 +396,9 @@ int GenCodeVisitor::visit(AssignStm *s) {
     code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
     emitMatrixLinearIndex(m);
     code << "  movq %rax, %rcx\n";
-    code << "  movq " << varOffset[m->name] << "(%rbp), %rax\n";
+    emitLoad(varType[m->name], stackAddr(varOffset[m->name]));
     code << "  movq (%rsp), %rdx\n  addq $16, %rsp\n";
-    code << "  movq %rdx, (%rax, %rcx, 8)\n";
+    emitStore(exprType(m), indexedAddr("%rax", "%rcx", storageSize(exprType(m))), "%rdx", "%edx");
     return 0;
   }
   if (auto de = dynamic_cast<DerefExp *>(s->target)) {
@@ -343,7 +406,7 @@ int GenCodeVisitor::visit(AssignStm *s) {
     code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
     de->ptr->accept(this);
     code << "  movq (%rsp), %rcx\n  addq $16, %rsp\n";
-    code << "  movq %rcx, (%rax)\n";
+    emitStore(exprType(de), "(%rax)", "%rcx", "%ecx");
     return 0;
   }
   return 0;
@@ -357,7 +420,8 @@ int GenCodeVisitor::visit(PrintStm *s) {
   const char *fmt = ".Lfmt_int";
   if (t == "string") fmt = ".Lfmt_str";
   else if (t == "char") fmt = ".Lfmt_char";
-  code << "  movq %rax, %rsi\n";
+  if (t == "string") code << "  movq %rax, %rsi\n";
+  else code << "  movl %eax, %esi\n";
   code << "  leaq " << fmt << "(%rip), %rdi\n";
   code << "  xorl %eax, %eax\n";
   code << "  call printf@PLT\n";
@@ -368,7 +432,7 @@ int GenCodeVisitor::visit(IfStm *s) {
   std::string lelse = newLabel("else");
   std::string lend = newLabel("endif");
   s->cond->accept(this);
-  code << "  cmpq $0, %rax\n  je " << (s->elseB ? lelse : lend) << "\n";
+  code << "  cmpl $0, %eax\n  je " << (s->elseB ? lelse : lend) << "\n";
   s->thenB->accept(this);
   if (s->elseB) {
     code << "  jmp " << lend << "\n";
@@ -386,7 +450,7 @@ int GenCodeVisitor::visit(WhileStm *s) {
   currentBreakLabel = lend;
   code << lstart << ":\n";
   s->cond->accept(this);
-  code << "  cmpq $0, %rax\n  je " << lend << "\n";
+  code << "  cmpl $0, %eax\n  je " << lend << "\n";
   s->body->accept(this);
   code << "  jmp " << lstart << "\n";
   code << lend << ":\n";
@@ -402,7 +466,7 @@ int GenCodeVisitor::visit(DoWhileStm *s) {
   code << lstart << ":\n";
   s->body->accept(this);
   s->cond->accept(this);
-  code << "  cmpq $0, %rax\n  jne " << lstart << "\n";
+  code << "  cmpl $0, %eax\n  jne " << lstart << "\n";
   code << lend << ":\n";
   currentBreakLabel = savedBreak;
   return 0;
@@ -419,7 +483,7 @@ int GenCodeVisitor::visit(ForStm *s) {
   code << lstart << ":\n";
   if (s->cond) {
     s->cond->accept(this);
-    code << "  cmpq $0, %rax\n  je " << lend << "\n";
+    code << "  cmpl $0, %eax\n  je " << lend << "\n";
   }
   s->body->accept(this);
   if (s->update) s->update->accept(this);
@@ -451,7 +515,7 @@ int GenCodeVisitor::visit(MethodDecl *d) {
   std::string label = (d->name == "Main") ? "main" : d->name;
   varOffset.clear();
   varType.clear();
-  currentOffset = -8;
+  currentOffset = 0;
   curLine = -1;
   currentRetLabel = ".L" + label + "_ret";
 
@@ -465,15 +529,14 @@ int GenCodeVisitor::visit(MethodDecl *d) {
   if (frame > 0) code << "  subq $" << frame << ", %rsp\n";
 
   for (int i = 0; i < nparams && i < 6; i++) {
-    int off = currentOffset;
-    currentOffset -= 8;
+    int off = allocateSlot(d->params[i].type);
     varOffset[d->params[i].name] = off;
     varType[d->params[i].name] = d->params[i].type;
-    code << "  movq " << ARG_REGS[i] << ", " << off << "(%rbp)\n";
+    emitStore(d->params[i].type, stackAddr(off), ARG_REGS[i], ARG_REGS32[i]);
   }
 
   d->body->accept(this);
-  code << "  movq $0, %rax\n";
+  code << "  movl $0, %eax\n";
   code << currentRetLabel << ":\n";
   code << "  leave\n  ret\n";
   return 0;
@@ -488,9 +551,18 @@ int GenCodeVisitor::visit(ClassDecl *d) {
 }
 
 int GenCodeVisitor::visit(StructDecl *sd) {
-  for (size_t i = 0; i < sd->fields.size(); i++)
+  int offset = 0;
+  int maxAlign = 1;
+  for (size_t i = 0; i < sd->fields.size(); i++) {
+    int align = storageAlign(sd->fields[i].type);
+    offset = alignTo(offset, align);
     structFieldIndex[sd->name][sd->fields[i].name] = (int)i;
-  structSize[sd->name] = (int)sd->fields.size();
+    structFieldOffset[sd->name][sd->fields[i].name] = offset;
+    structFieldType[sd->name][sd->fields[i].name] = sd->fields[i].type;
+    offset += storageSize(sd->fields[i].type);
+    if (align > maxAlign) maxAlign = align;
+  }
+  structSizeBytes[sd->name] = alignTo(offset, maxAlign);
   return 0;
 }
 
@@ -508,7 +580,7 @@ void GenCodeVisitor::generar(Program *p) {
 std::string GenCodeVisitor::render() {
   std::ostringstream out;
   out << ".data\n";
-  out << ".Lfmt_int:  .string \"%ld\\n\"\n";
+  out << ".Lfmt_int:  .string \"%d\\n\"\n";
   out << ".Lfmt_char: .string \"%c\\n\"\n";
   out << ".Lfmt_str:  .string \"%s\\n\"\n";
   for (size_t i = 0; i < stringLits.size(); i++)

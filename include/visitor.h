@@ -186,9 +186,11 @@ class GenCodeVisitor : public Visitor {
   std::unordered_map<std::string, int> varOffset;
   std::unordered_map<std::string, std::string> varType;
   std::unordered_map<std::string, std::unordered_map<std::string, int>> structFieldIndex;
-  std::unordered_map<std::string, int> structSize;
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> structFieldOffset;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>> structFieldType;
+  std::unordered_map<std::string, int> structSizeBytes;
   std::unordered_map<std::string, long> matrixCols;
-  int currentOffset = -8;
+  int currentOffset = 0;
   int labelCounter = 0;
   std::string currentBreakLabel;
   std::string currentRetLabel;
@@ -202,6 +204,15 @@ class GenCodeVisitor : public Visitor {
   void collectStrings(Program *p);
   int countVars(Stm *s);
   std::string exprType(Exp *e) const;
+  bool isPrimitive32(const std::string &type) const;
+  int storageSize(const std::string &type) const;
+  int storageAlign(const std::string &type) const;
+  int allocateSlot(const std::string &type);
+  void emitIntConst(long value);
+  void emitLoad(const std::string &type, const std::string &addr);
+  void emitStore(const std::string &type, const std::string &addr,
+                 const std::string &reg64 = "%rax", const std::string &reg32 = "%eax");
+  void emitZeroStore(const std::string &type, const std::string &addr);
 
 public:
   explicit GenCodeVisitor(bool optimize = true) : optimize(optimize) {}
