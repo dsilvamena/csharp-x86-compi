@@ -22,6 +22,9 @@ Docker para ensamblar y ejecutar dentro de un contenedor Linux.
   - numeración de Sethi-Ullman
   - optimización peephole textual
 - Suite de pruebas para programas válidos y errores esperados del compilador.
+- Modo `--json` para integrarse con la app web (backend Node + estudio React):
+  el compilador lee el fuente por stdin y emite un único objeto JSON con tokens,
+  AST, ensamblador con/sin optimizar, mapa de líneas y reporte de optimización.
 
 ## Estructura del repositorio
 
@@ -103,6 +106,43 @@ Opciones útiles del compilador:
 ```
 
 `--opt` es el modo por defecto.
+
+## Modo `--json` e integración con la web
+
+Además de generar archivos `.s`, el compilador expone un modo `--json` que sirve
+de puente con la app web (backend Node/Express + estudio React en `typescript/`).
+En este modo **el fuente se lee por stdin** y se emite **exactamente un objeto
+JSON** por stdout, serializado a mano (sin librerías externas):
+
+```bash
+./build/compiler --json < inputs/02_functions.cs
+```
+
+El objeto contiene:
+
+```jsonc
+{ "success": bool,
+  "tokens": [{ "type", "lexeme", "line", "col", "value"? }],
+  "ast": "<árbol textual de printAst>",
+  "asm": "<AT&T .s sin optimizar>", "asmOpt": "<AT&T .s optimizado>",
+  "asmSourceMap": [number | null],   // por cada línea de asm: línea C# o null
+  "optReport": { "instructionsBefore", "instructionsAfter", "removed",
+                 "reductionPercent", "constantFolding", "peepholeRemoved",
+                 "summary" } | null,
+  "errors": [{ "phase", "severity", "message", "line", "col" }],
+  "metrics": { "compileTimeMs" } }
+```
+
+Ante un error de compilación el proceso **sale con código 1 pero igual imprime un
+JSON válido** con `success:false` y el error con su fase (mapeada al inglés que
+espera el front: `lexical`/`syntax`/`semantic`), línea y columna. `asmSourceMap`
+alinea cada línea del ensamblador con la línea de C# que la produjo (o `null`),
+lo que permite el resaltado C#↔x86 en la web.
+
+El backend (`backend/`) hace `spawn` de este binario con `--json`, le escribe el
+fuente por stdin y reenvía el JSON tal cual; el binario esperado está en
+`c++/build/compiler` (variable `COMPILER_BIN`). Ver `backend/README.md` para los
+endpoints (`/api/compile`, `/api/run`) y variables de entorno.
 
 ## Ejecutar un programa generado
 
