@@ -13,9 +13,9 @@ salida idénticos**: una vez en el subconjunto de C# que acepta este compilador
 |---|---|---|
 | `mine-noopt` | este compilador `--no-opt` + `g++ -no-pie` (ensambla y enlaza) | sin optimizaciones |
 | `mine-opt` | este compilador `--opt` + `g++ -no-pie` | plegado de constantes, Sethi-Ullman, peephole |
-| `gcc-O0` | `gcc -O0` | referencia sin optimizar |
-| `gcc-O2` | `gcc -O2` | referencia optimizada |
-| `clang-O2` | `clang -O2` | segundo compilador comercial |
+| `gcc-O0` | `gcc -O0 -fwrapv` | referencia sin optimizar, con wrap signed de `int32` |
+| `gcc-O2` | `gcc -O2 -fwrapv` | referencia optimizada, con wrap signed de `int32` |
+| `clang-O2` | `clang -O2 -fwrapv` | segundo compilador comercial, con wrap signed de `int32` |
 
 **Qué se mide, por benchmark y configuración:**
 
@@ -51,9 +51,11 @@ tiempo de corrida), plataforma `linux/amd64`, 15 CPUs.
 | `matmul` | arreglos 2D, bucles anidados, multiplicación entera | matrices 200×200 |
 
 Los cuatro son *resistentes a la eliminación de código muerto*: imprimen un
-checksum que depende de todo el cómputo, de modo que `gcc -O2`/`clang -O2` no
-pueden reducir el bucle a una constante. `hashloop` usa una recurrencia
-multiplicativa precisamente para impedir que se cierre en forma analítica.
+checksum que depende de todo el cómputo, de modo que `gcc -O2 -fwrapv`/
+`clang -O2 -fwrapv` no puedan eliminar el bucle. `hashloop` usa una recurrencia
+multiplicativa precisamente para impedir que se cierre en forma analítica. La
+opción `-fwrapv` evita depender de comportamiento indefinido de C en el
+desbordamiento signed y fija la misma semántica de `int32` que usa el backend.
 
 ## 3. Resultados
 
@@ -64,41 +66,41 @@ verificadas idénticas en las 5 configuraciones de cada benchmark.
 
 | Config | Compile (ms) | Run (ms) | Asm (líneas) | Binario (bytes) |
 |---|---|---|---|---|
-| mine-noopt | 111.97 | 94.70 | 89 | 15792 |
-| mine-opt | 113.37 | 94.56 | 83 | 15792 |
-| gcc-O0 | 196.53 | 55.32 | 70 | 15776 |
-| gcc-O2 | 347.94 | 24.00 | 397 | 15776 |
-| clang-O2 | 654.89 | 36.90 | 78 | 16088 |
+| mine-noopt | 111.48 | 94.10 | 89 | 15792 |
+| mine-opt | 110.68 | 94.65 | 83 | 15792 |
+| gcc-O0 | 196.95 | 55.02 | 70 | 15776 |
+| gcc-O2 | 350.04 | 24.71 | 375 | 15776 |
+| clang-O2 | 649.66 | 36.73 | 78 | 16088 |
 
-### hashloop — 10⁸ iteraciones = -5768770193658875776
+### hashloop — 10⁸ iteraciones = -1206259584
 
 | Config | Compile (ms) | Run (ms) | Asm (líneas) | Binario (bytes) |
 |---|---|---|---|---|
-| mine-noopt | 112.40 | 317.54 | 68 | 15728 |
-| mine-opt | 112.04 | 303.26 | 65 | 15728 |
-| gcc-O0 | 197.87 | 107.03 | 47 | 15760 |
-| gcc-O2 | 287.43 | 81.02 | 38 | 15760 |
-| clang-O2 | 657.07 | 26.00 | 51 | 16064 |
+| mine-noopt | 112.33 | 427.74 | 68 | 15728 |
+| mine-opt | 117.03 | 420.43 | 65 | 15728 |
+| gcc-O0 | 199.05 | 129.46 | 47 | 15760 |
+| gcc-O2 | 291.37 | 103.49 | 38 | 15760 |
+| clang-O2 | 678.41 | 28.61 | 45 | 16064 |
 
 ### sieve — primos < 2·10⁶ = 148933
 
 | Config | Compile (ms) | Run (ms) | Asm (líneas) | Binario (bytes) |
 |---|---|---|---|---|
-| mine-noopt | 112.63 | 44.03 | 162 | 15784 |
-| mine-opt | 112.67 | 44.13 | 159 | 15784 |
-| gcc-O0 | 207.15 | 33.79 | 91 | 15856 |
-| gcc-O2 | 311.52 | 22.74 | 61 | 15856 |
-| clang-O2 | 707.65 | 22.79 | 82 | 16160 |
+| mine-noopt | 113.96 | 45.09 | 162 | 15784 |
+| mine-opt | 115.50 | 43.86 | 159 | 15784 |
+| gcc-O0 | 217.94 | 34.27 | 91 | 15856 |
+| gcc-O2 | 314.97 | 23.04 | 67 | 15856 |
+| clang-O2 | 707.62 | 23.38 | 82 | 16160 |
 
 ### matmul — `c[199,199]` = 333300
 
 | Config | Compile (ms) | Run (ms) | Asm (líneas) | Binario (bytes) |
 |---|---|---|---|---|
-| mine-noopt | 112.95 | 39.15 | 364 | 15784 |
-| mine-opt | 113.43 | 38.90 | 361 | 15784 |
-| gcc-O0 | 212.49 | 29.17 | 208 | 15856 |
-| gcc-O2 | 346.71 | 16.55 | 226 | 15904 |
-| clang-O2 | 763.68 | 16.69 | 222 | 16208 |
+| mine-noopt | 114.22 | 39.12 | 381 | 15784 |
+| mine-opt | 114.17 | 39.52 | 378 | 15784 |
+| gcc-O0 | 218.70 | 28.79 | 207 | 15856 |
+| gcc-O2 | 374.12 | 16.42 | 226 | 15904 |
+| clang-O2 | 766.76 | 16.59 | 222 | 16208 |
 
 *(Datos crudos reproducibles en `benchmarks/results/results.csv`; tabla
 autogenerada en `benchmarks/results/results.md`.)*
@@ -109,28 +111,28 @@ autogenerada en `benchmarks/results/results.md`.)*
 
 | Benchmark | mine-opt vs gcc-O0 | mine-opt vs gcc-O2 | mine-opt vs clang-O2 |
 |---|---|---|---|
-| fib | 1.7× más lento | 3.9× más lento | 2.6× más lento |
-| hashloop | 2.8× más lento | 3.7× más lento | 11.7× más lento |
+| fib | 1.7× más lento | 3.8× más lento | 2.6× más lento |
+| hashloop | 3.3× más lento | 4.1× más lento | 14.7× más lento |
 | sieve | 1.3× más lento | 1.9× más lento | 1.9× más lento |
-| matmul | 1.3× más lento | 2.4× más lento | 2.3× más lento |
+| matmul | 1.4× más lento | 2.4× más lento | 2.4× más lento |
 
 El compilador genera código **correcto y funcional**, con un costo típico de
-**2–4× frente a `gcc -O2`** y a menudo **cercano a `gcc -O0`**. Las causas del
+**1.9–4.1× frente a `gcc -O2`** y a menudo **cercano a `gcc -O0`**. Las causas del
 diferencial son las esperables de un generador de código simple:
 
 - **Sin asignación de registros global.** El compilador usa un esquema de
   pila/acumulador: casi cada operación toca memoria. GCC/Clang mantienen las
   variables calientes (`i`, `h`, acumuladores) en registros. Esto explica el
   peor caso, `hashloop` (bucle apretado sobre una variable): Clang además aplica
-  *strength reduction* y desenrollado y llega a ser **11.7×** más rápido.
+  *strength reduction* y desenrollado y llega a ser **14.7×** más rápido.
 - **Selección de instrucciones ingenua** y ausencia de LICM, desenrollado de
   bucles y vectorización.
 
 **Efecto de `--opt` (optimización propia).** La diferencia `mine-opt` vs
 `mine-noopt` en tiempo de ejecución es **marginal** (dentro del ruido: fib
-94.56 vs 94.70 ms; sieve 44.13 vs 44.03 ms). El efecto visible está en el
+94.65 vs 94.10 ms; sieve 43.86 vs 45.09 ms). El efecto visible está en el
 **tamaño del ensamblador**, que el peephole reduce de forma consistente
-(fib 89→83, hashloop 68→65, sieve 162→159, matmul 364→361 líneas). Interpretación
+(fib 89→83, hashloop 68→65, sieve 162→159, matmul 381→378 líneas). Interpretación
 honesta: las optimizaciones implementadas (plegado de constantes, Sethi-Ullman,
 peephole) son **locales**; no atacan el cuello de botella real —tráfico a
 memoria por falta de asignación de registros— por lo que su impacto en tiempo es
@@ -139,10 +141,10 @@ convendría un benchmark saturado de subexpresiones constantes (donde el plegado
 sí dispara) o implementar asignación de registros.
 
 **Tiempo de compilación.** Aquí este compilador aparece **más rápido**
-(~112 ms constante) que `gcc -O0` (~200 ms), `gcc -O2` (~290–350 ms) y
-`clang -O2` (~650–770 ms). La lectura correcta es matizada: (a) el lenguaje
+(~111–117 ms) que `gcc -O0` (~197–219 ms), `gcc -O2` (~291–374 ms) y
+`clang -O2` (~650–767 ms). La lectura correcta es matizada: (a) el lenguaje
 aceptado es un subconjunto mínimo, sin el frontend ni el pipeline de
-optimización de un compilador industrial; (b) esos ~112 ms están **dominados por
+optimización de un compilador industrial; (b) esos tiempos están **dominados por
 el paso `g++` de ensamblado y enlace**, no por el frontend propio, que es casi
 instantáneo. Es decir, *compilar menos y optimizar menos* cuesta menos tiempo,
 como es de esperar. Aun así muestra un punto real: un pipeline simple tiene
@@ -151,23 +153,21 @@ baja latencia de compilación.
 **Tamaño de binario y ensamblador.** Los ejecutables son casi idénticos en
 tamaño (~15.8 KB; domina el runtime de C enlazado estáticamente en la sección
 relevante). En **líneas de ensamblador**, `gcc -O0`/`clang -O2` suelen ser más
-compactos que `mine` (p. ej. sieve 61–91 vs 159); la excepción es `gcc -O2` en
-`fib` (397 líneas) por *inlining* agresivo de la recursión, que cambia código por
+compactos que `mine` (p. ej. sieve 67–91 vs 159); la excepción es `gcc -O2` en
+`fib` (375 líneas) por *inlining* agresivo de la recursión, que cambia código por
 velocidad.
 
-**Hallazgo semántico: `int` de 64 bits.** El benchmark `hashloop` reveló que
-este compilador implementa `int` como entero de **64 bits**, a diferencia de C#
-y de C (32 bits). Con desbordamiento a 32 bits la salida era `-1206259584`; con
-64 bits es `-5768770193658875776`. Para que la comparación fuera equivalente, la
-versión en C de `hashloop` se ajustó a `long long`. Los otros tres benchmarks no
-se ven afectados porque sus valores caben en 32 bits. *(Si el objetivo fuera la
-conformidad estricta con C#, `int` debería ser de 32 bits.)*
+**Semántica de enteros.** Esta versión del compilador implementa `int` como
+entero de **32 bits**. Por eso las versiones C usan `int`, no `long long`. En
+`hashloop` el desbordamiento signed es intencional para estresar aritmética
+modular; las referencias GCC/Clang se compilan con `-fwrapv` para que esa
+semántica sea explícita y comparable.
 
 ## 5. Conclusiones
 
 - El compilador produce código **correcto** para los cuatro núcleos: salida
   idéntica a GCC y Clang en las cinco configuraciones.
-- El costo en tiempo de ejecución es de **2–4× frente a `gcc -O2`**, competitivo
+- El costo en tiempo de ejecución es de **1.9–4.1× frente a `gcc -O2`**, competitivo
   con `gcc -O0`; el peor caso son los bucles muy apretados, donde la falta de
   asignación de registros pesa más.
 - Las optimizaciones propias reducen el tamaño del ensamblador pero **casi no

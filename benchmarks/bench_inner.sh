@@ -13,9 +13,9 @@
 # Configuraciones:
 #   mine-noopt : tu compilador --no-opt  + g++ -no-pie (link)
 #   mine-opt   : tu compilador --opt     + g++ -no-pie (link)
-#   gcc-O0     : gcc -O0
-#   gcc-O2     : gcc -O2
-#   clang-O2   : clang -O2   (si clang esta disponible)
+#   gcc-O0     : gcc -O0 -fwrapv
+#   gcc-O2     : gcc -O2 -fwrapv
+#   clang-O2   : clang -O2 -fwrapv   (si clang esta disponible)
 # =============================================================================
 set -eu
 
@@ -55,10 +55,10 @@ build_mine() { # <bench> <optflag> <tag>
   g++ -no-pie "$WORK/$1.$3.s" -o "$WORK/$1.$3" >/dev/null 2>&1
 }
 build_gcc() { # <bench> <level>
-  gcc -O"$2" "$C_DIR/$1.c" -o "$WORK/$1.gcc$2" >/dev/null 2>&1
+  gcc -O"$2" -fwrapv "$C_DIR/$1.c" -o "$WORK/$1.gcc$2" >/dev/null 2>&1
 }
 build_clang() { # <bench>
-  clang -O2 "$C_DIR/$1.c" -o "$WORK/$1.clang2" >/dev/null 2>&1
+  clang -O2 -fwrapv "$C_DIR/$1.c" -o "$WORK/$1.clang2" >/dev/null 2>&1
 }
 
 echo "benchmark,config,output,compile_ms,run_ms,asm_lines,bin_bytes" > "$CSV"
@@ -88,9 +88,9 @@ for b in $BENCHES; do
   echo "== $b =="
 
   # Ensamblador de referencia de gcc/clang (para contar lineas; no cronometrado)
-  gcc   -O0 -S "$C_DIR/$b.c" -o "$WORK/$b.gcc0.s"   2>/dev/null || true
-  gcc   -O2 -S "$C_DIR/$b.c" -o "$WORK/$b.gcc2.s"   2>/dev/null || true
-  [ "$HAVE_CLANG" = 1 ] && clang -O2 -S "$C_DIR/$b.c" -o "$WORK/$b.clang2.s" 2>/dev/null || true
+  gcc   -O0 -fwrapv -S "$C_DIR/$b.c" -o "$WORK/$b.gcc0.s"   2>/dev/null || true
+  gcc   -O2 -fwrapv -S "$C_DIR/$b.c" -o "$WORK/$b.gcc2.s"   2>/dev/null || true
+  [ "$HAVE_CLANG" = 1 ] && clang -O2 -fwrapv -S "$C_DIR/$b.c" -o "$WORK/$b.clang2.s" 2>/dev/null || true
 
   run_config "$b" mine-noopt "$WORK/$b.noopt" "$WORK/$b.noopt.s" build_mine "$b" --no-opt noopt
   run_config "$b" mine-opt   "$WORK/$b.opt"   "$WORK/$b.opt.s"   build_mine "$b" --opt   opt

@@ -1,7 +1,10 @@
 # Benchmarks
 
-Evaluación comparativa de `csharp-x86-compi` contra **GCC** (`-O0`, `-O2`) y
-**Clang/LLVM** (`-O2`), para el criterio *Comparación Comercial* del proyecto.
+Evaluación comparativa de `csharp-x86-compi` contra **GCC** (`-O0 -fwrapv`,
+`-O2 -fwrapv`) y **Clang/LLVM** (`-O2 -fwrapv`), para el criterio
+*Comparación Comercial* del proyecto.
+Las versiones C se compilan con `-fwrapv` para fijar el mismo desbordamiento
+signed de `int32` que emite este compilador.
 
 Cada benchmark está escrito dos veces con **algoritmo y salida idénticos**:
 
@@ -25,7 +28,7 @@ benchmarks/
 | `matmul` | arreglos 2D + bucles anidados | matrices 200×200 |
 
 Todos imprimen un checksum que depende de todo el cómputo, para que
-`gcc -O2`/`clang -O2` no puedan eliminar el bucle.
+`gcc -O2 -fwrapv`/`clang -O2 -fwrapv` no puedan eliminar el bucle.
 
 ## Cómo correr
 

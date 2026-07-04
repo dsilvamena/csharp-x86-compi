@@ -5,7 +5,7 @@
 #   benchmarks/bench.sh
 #
 # Reconstruye tu compilador dentro del contenedor, instala clang, y compara
-# tu compilador (--opt / --no-opt) contra gcc -O0, gcc -O2 y clang -O2.
+# tu compilador (--opt / --no-opt) contra gcc/clang sobre int32 con -fwrapv.
 # Resultados en benchmarks/results/{results.csv,results.md}.
 # =============================================================================
 set -eu
