@@ -35,11 +35,11 @@
 \begin{document}
 \begin{tabular}{@{}r@{\hspace{1em}}c@{\hspace{0.7em}}l@{}}
 
-\N{Program}        & \Def & \M{(}\N{StructDecl} \Or \N{ClassDecl}\M{)+} \\[6pt]
+\N{Program}        & \Def & \N{StructDecl}\M{*} \N{ClassDecl} \M{(}\N{StructDecl} \Or \N{ClassDecl}\M{)*} \\[6pt]
 
 \N{StructDecl}     & \Def & \T{struct} \Tok{id} \T{\{} \N{FieldDecl}\M{*} \T{\}} \\[6pt]
 
-\N{FieldDecl}      & \Def & \N{Type} \Tok{id} \T{;} \\[6pt]
+\N{FieldDecl}      & \Def & \N{VarType} \Tok{id} \T{;} \\[6pt]
 
 \N{ClassDecl}      & \Def & \T{class} \Tok{id} \T{\{} \N{MethodDecl}\M{*} \T{\}} \\[6pt]
 
@@ -48,13 +48,29 @@
 \N{Params}         & \Def & \eps \\
                    & \Or  & \N{Param} \M{(}\T{,} \N{Param}\M{)*} \\[6pt]
 
-\N{Param}          & \Def & \N{Type} \Tok{id} \\[6pt]
+\N{Param}          & \Def & \N{ParamType} \Tok{id} \\[6pt]
 
-\N{Type}           & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \T{void} \Or \Tok{id} \\
-                   & \Or  & \N{Type} \T{[]} \Or \N{Type} \T{[,]} \Or \N{Type} \T{*} \\[6pt]
+\N{Type}           & \Def & \N{BaseType} \N{ArraySuffix}\M{?} \N{PointerSuffix}\M{*} \\[6pt]
 
-\N{VarType}        & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \Tok{id} \\
-                   & \Or  & \N{VarType} \T{[]} \Or \N{VarType} \T{[,]} \Or \N{VarType} \T{*} \\[6pt]
+\N{VarType}        & \Def & \N{VarBaseType} \N{ArraySuffix}\M{?} \N{PointerSuffix}\M{*} \\[6pt]
+
+\N{ParamType}      & \Def & \N{VarBaseType} \N{Array1DSuffix}\M{?} \N{PointerSuffix}\M{*} \\[6pt]
+
+\N{LambdaType}     & \Def & \N{VarBaseType} \N{PointerSuffix}\M{*} \\[6pt]
+
+\N{NewType}        & \Def & \N{VarBaseType} \N{PointerSuffix}\M{*} \\[6pt]
+
+\N{BaseType}       & \Def & \N{VarBaseType} \Or \T{void} \\[6pt]
+
+\N{VarBaseType}    & \Def & \T{int} \Or \T{bool} \Or \T{char} \Or \T{string} \Or \Tok{id} \\[6pt]
+
+\N{ArraySuffix}    & \Def & \N{Array1DSuffix} \Or \N{MatrixSuffix} \\[6pt]
+
+\N{Array1DSuffix}  & \Def & \T{[]} \\[6pt]
+
+\N{MatrixSuffix}   & \Def & \T{[,]} \\[6pt]
+
+\N{PointerSuffix}  & \Def & \T{*} \\[6pt]
 
 \N{Block}          & \Def & \T{\{} \N{Stm}\M{*} \T{\}} \\[6pt]
 
@@ -102,15 +118,22 @@
 
 \N{Unary}          & \Def & \N{Lambda} \\
                    & \Or  & \M{(}\T{-} \Or \T{!}\M{)} \N{Unary} \\
-                   & \Or  & \T{(} \N{Type} \T{)} \N{Unary} \\
+                   & \Or  & \T{(} \N{CastType} \T{)} \N{Unary} \\
                    & \Or  & \T{\&} \Tok{id} \Or \T{*} \N{Unary} \\
                    & \Or  & \N{Primary} \\[6pt]
 
-\N{Lambda}         & \Def & \T{(} \N{Params} \T{)} \T{=>} \N{Expr} \\[6pt]
+\N{CastType}       & \Def & \T{int} \Or \T{char} \\[6pt]
+
+\N{Lambda}         & \Def & \T{(} \N{LambdaParams} \T{)} \T{=>} \N{Expr} \\[6pt]
+
+\N{LambdaParams}   & \Def & \eps \\
+                   & \Or  & \N{LambdaParam} \M{(}\T{,} \N{LambdaParam}\M{)*} \\[6pt]
+
+\N{LambdaParam}    & \Def & \N{LambdaType} \Tok{id} \\[6pt]
 
 \N{Primary}        & \Def & \Tok{num} \Or \Tok{charlit} \Or \Tok{stringlit} \Or \T{true} \Or \T{false} \\
-                   & \Or  & \T{new} \N{Type} \T{[} \N{Expr} \T{]} \\
-                   & \Or  & \T{new} \N{Type} \T{[} \N{Expr} \T{,} \N{Expr} \T{]} \\
+                   & \Or  & \T{new} \N{NewType} \T{[} \N{Expr} \T{]} \\
+                   & \Or  & \T{new} \N{NewType} \T{[} \N{Expr} \T{,} \N{Expr} \T{]} \\
                    & \Or  & \Tok{id} \Or \Tok{id} \T{(} \N{Args} \T{)} \Or \Tok{id} \T{.} \Tok{id} \\
                    & \Or  & \Tok{id} \T{[} \N{Expr} \T{]} \Or \Tok{id} \T{[} \N{Expr} \T{,} \N{Expr} \T{]} \\
                    & \Or  & \T{(} \N{Expr} \T{)} \\[6pt]
