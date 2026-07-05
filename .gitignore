@@ -28,13 +28,13 @@ yarn.lock
 # TypeScript
 *.tsbuildinfo
 dist/
-*.js
+
 # Un-ignore source JS at any depth (p. ej. el simulador en
 # typescript/packages/web/src/sim/simulator.js). Ojo: una negación con '/' se
 # ancla a la ubicación del .gitignore, por eso hace falta el '**/' inicial —
 # '!src/**/*.js' solo alcanzaría un 'src/' de primer nivel.
 !**/src/**/*.js
-
+typescript/packages/web/.vite/deps
 # IDE / Editor
 .vscode/
 .idea/
