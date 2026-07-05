@@ -214,7 +214,9 @@ int TypeCheckerVisitor::visit(MatrixAccessExp *e) {
 
 int TypeCheckerVisitor::visit(Block *s) {
   env.add_level();
+  constEnv.add_level();
   for (auto st : s->stms) st->accept(this);
+  constEnv.remove_level();
   env.remove_level();
   return 0;
 }
@@ -242,11 +244,16 @@ int TypeCheckerVisitor::visit(VarDecStm *s) {
     throw CompileError("semantico", "una variable no puede ser void", s->line, s->col);
   if (!isType(declared))
     throw CompileError("semantico", "tipo desconocido: '" + declared + "'", s->line, s->col);
+  if (s->isConst && s->inferred)
+    throw CompileError("semantico", "'const' requiere un tipo explicito", s->line, s->col);
+  if (s->isConst && !s->init)
+    throw CompileError("semantico", "'const' requiere inicializador", s->line, s->col);
   if (declared.size() >= 3 && declared.substr(declared.size() - 3) == "[,]" &&
       !dynamic_cast<NewMatrixExp *>(s->init))
     throw CompileError("semantico", "una matriz 2D debe inicializarse con 'new T[r,c]'",
                        s->line, s->col);
   env.add_var(s->name, declared);
+  constEnv.add_var(s->name, s->isConst ? "1" : "0");
   return 0;
 }
 
@@ -255,6 +262,10 @@ int TypeCheckerVisitor::visit(AssignStm *s) {
   if (auto id = dynamic_cast<IdExp *>(s->target)) {
     if (!env.lookup(id->name, tt))
       throw CompileError("semantico", "variable no declarada: '" + id->name + "'", s->line, s->col);
+    std::string marker;
+    if (constEnv.lookup(id->name, marker) && marker == "1")
+      throw CompileError("semantico", "no se puede asignar a la constante '" + id->name + "'",
+                         s->line, s->col);
     id->inferredType = tt;
   } else if (dynamic_cast<FieldExp *>(s->target) ||
              dynamic_cast<ArrayAccessExp *>(s->target) ||
@@ -307,6 +318,7 @@ int TypeCheckerVisitor::visit(DoWhileStm *s) {
 
 int TypeCheckerVisitor::visit(ForStm *s) {
   env.add_level();
+  constEnv.add_level();
   if (s->init) s->init->accept(this);
   if (s->cond && typeOf(s->cond) != "bool")
     throw CompileError("semantico", "la condicion de 'for' debe ser bool", s->line, s->col);
@@ -314,6 +326,7 @@ int TypeCheckerVisitor::visit(ForStm *s) {
   loopDepth++;
   s->body->accept(this);
   loopDepth--;
+  constEnv.remove_level();
   env.remove_level();
   return 0;
 }
@@ -349,6 +362,7 @@ int TypeCheckerVisitor::visit(UnsafeStm *s) {
 int TypeCheckerVisitor::visit(MethodDecl *d) {
   currentReturnType = d->retType;
   env.add_level();
+  constEnv.add_level();
   for (auto &p : d->params) {
     if (p.type == "void")
       throw CompileError("semantico", "un parametro no puede ser void", 0, 0);
@@ -357,8 +371,10 @@ int TypeCheckerVisitor::visit(MethodDecl *d) {
     if (!isType(p.type))
       throw CompileError("semantico", "tipo de parametro desconocido: '" + p.type + "'", 0, 0);
     env.add_var(p.name, p.type);
+    constEnv.add_var(p.name, "0");
   }
   d->body->accept(this);
+  constEnv.remove_level();
   env.remove_level();
   return 0;
 }

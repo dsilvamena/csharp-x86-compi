@@ -121,7 +121,7 @@ public:
       for (auto st : b->stms) stm(st);
       depth--;
     } else if (auto v = dynamic_cast<VarDecStm *>(s)) {
-      line("VarDecStm " + v->type + " " + v->name);
+      line(std::string(v->isConst ? "ConstDecStm " : "VarDecStm ") + v->type + " " + v->name);
       if (v->init) { depth++; exp(v->init); depth--; }
     } else if (auto a = dynamic_cast<AssignStm *>(s)) {
       line("AssignStm");
@@ -264,7 +264,7 @@ public:
       return id;
     }
     if (auto v = dynamic_cast<VarDecStm *>(s)) {
-      int id = node("VarDecStm " + v->type + " " + v->name);
+      int id = node(std::string(v->isConst ? "ConstDecStm " : "VarDecStm ") + v->type + " " + v->name);
       if (v->init) edge(id, exp(v->init), "init");
       return id;
     }

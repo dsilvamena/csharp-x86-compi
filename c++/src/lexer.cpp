@@ -58,6 +58,7 @@ static const std::unordered_map<std::string, Token::Type> &keywords() {
   static const std::unordered_map<std::string, Token::Type> kw = {
       {"class", Token::CLASS},   {"static", Token::STATIC}, {"struct", Token::STRUCT},
       {"unsafe", Token::UNSAFE}, {"new", Token::NEW},       {"var", Token::VAR},
+      {"const", Token::CONST},
       {"int", Token::INT},
       {"bool", Token::BOOL},     {"char", Token::CHAR},     {"string", Token::STRING},
       {"void", Token::VOID},     {"if", Token::IF},         {"else", Token::ELSE},

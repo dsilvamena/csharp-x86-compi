@@ -14,6 +14,7 @@ std::string Token::typeName(Type t) {
     case UNSAFE: return "unsafe";
     case NEW: return "new";
     case VAR: return "var";
+    case CONST: return "const";
     case INT: return "int";
     case BOOL: return "bool";
     case CHAR: return "char";

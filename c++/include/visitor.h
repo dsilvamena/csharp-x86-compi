@@ -56,6 +56,7 @@ public:
 
 class TypeCheckerVisitor : public Visitor {
   Environment env;
+  Environment constEnv;
   std::unordered_map<std::string, MethodDecl *> methods;
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> structs;
   std::string currentReturnType;

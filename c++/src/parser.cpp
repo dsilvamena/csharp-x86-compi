@@ -52,7 +52,7 @@ bool Parser::isTypeStart() const {
 }
 
 bool Parser::looksLikeVarDecl() {
-  if (isTypeStart() || check(Token::VAR)) return true;
+  if (isTypeStart() || check(Token::VAR) || check(Token::CONST)) return true;
   if (check(Token::ID)) {
     if (structNames.count(current.text)) return true;
     if (peek().type == Token::ID) return true;
@@ -184,7 +184,10 @@ Stm *Parser::parseStatement() {
 Stm *Parser::parseVarDecNoSemi() {
   int L = current.line, C = current.col;
   bool inferred = false;
+  bool isConst = match(Token::CONST);
   std::string type;
+  if (isConst && check(Token::VAR))
+    throw CompileError("sintactico", "'const' requiere un tipo explicito", L, C);
   if (match(Token::VAR)) {
     inferred = true;
     type = "var";
@@ -196,7 +199,9 @@ Stm *Parser::parseVarDecNoSemi() {
   if (match(Token::ASSIGN)) init = parseExpr();
   if (inferred && !init)
     throw CompileError("sintactico", "'var' requiere un inicializador", L, C);
-  VarDecStm *vd = new VarDecStm(type, name.text, init, inferred);
+  if (isConst && !init)
+    throw CompileError("sintactico", "'const' requiere un inicializador", L, C);
+  VarDecStm *vd = new VarDecStm(type, name.text, init, inferred, isConst);
   vd->line = L;
   vd->col = C;
   return vd;
