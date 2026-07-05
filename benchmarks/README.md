@@ -1,16 +1,22 @@
 # Benchmarks
 
-Evaluación comparativa de `csharp-x86-compi` contra **GCC** (`-O0`, `-O2`) y
-**Clang/LLVM** (`-O2`), para el criterio *Comparación Comercial* del proyecto.
+Evaluación comparativa de `csharp-x86-compi` contra **GCC** (`-O0`, `-O2`),
+**Clang/LLVM** (`-O2`) y **.NET Native AOT**, para el criterio
+*Comparación Comercial* del proyecto.
 
-Cada benchmark está escrito dos veces con **algoritmo y salida idénticos**:
+Cada benchmark está escrito en tres versiones con **algoritmo, salida y ancho de
+entero equivalentes**. Como este compilador implementa `int` con 64 bits, las
+versiones C usan tipos de 64 bits (`int64_t`/`uint64_t`) y las versiones .NET
+usan `long` donde corresponde:
 
 ```text
 benchmarks/
   cs/        versiones en el subconjunto de C# de este compilador (.cs)
   c/         versiones equivalentes en C (.c)
+  dotnet/    versiones equivalentes para .NET Native AOT (.cs)
   bench.sh          lanza la suite en Docker linux/amd64 (usar en macOS)
-  bench_inner.sh    corre dentro del contenedor (no invocar directo)
+  bench_wsl.sh      corre la suite directamente en WSL/Linux x86-64
+  bench_inner.sh    implementación común usada por Docker y WSL
   results/          resultados generados (results.csv, results.md)
   REPORT.md         análisis técnico redactado (para el reporte del proyecto)
 ```
@@ -29,6 +35,8 @@ Todos imprimen un checksum que depende de todo el cómputo, para que
 
 ## Cómo correr
 
+### Opción 1: Docker
+
 Desde la raíz del repositorio:
 
 ```bash
@@ -38,16 +46,36 @@ benchmarks/bench.sh
 Requiere Docker (en macOS/Apple Silicon corre `linux/amd64` emulado). El script:
 
 1. Reconstruye el compilador dentro del contenedor (`.docker-build/compiler`).
-2. Instala `clang`.
+2. Usa la imagen `mcr.microsoft.com/dotnet/sdk:8.0` e instala toolchain nativo
+   (`build-essential`, `clang`, `zlib1g-dev`).
 3. Para cada benchmark y configuración mide compilación, ejecución, líneas de
    asm y tamaño del binario, y **verifica que todas las salidas coincidan**.
 4. Escribe `results/results.csv` y `results/results.md`.
 
-En Linux nativo x86-64 puedes correr `bench_inner.sh` directamente:
+### Opción 2: WSL/Linux sin Docker
+
+En WSL o Linux x86-64 nativo puedes correr la suite sin contenedores:
 
 ```bash
-make BUILD_DIR=.docker-build
-COMPILER=./.docker-build/compiler bash benchmarks/bench_inner.sh
+benchmarks/bench_wsl.sh
+```
+
+Dependencias base:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential clang
+```
+
+Para incluir `dotnet-aot`, instala además el SDK de .NET 8. Si `clang` o
+`dotnet` no están disponibles, la suite omite `clang-O2` o `dotnet-aot` y lo
+indica al final.
+
+Para correr un subconjunto:
+
+```bash
+BENCHES="fib hashloop" benchmarks/bench.sh
+BENCHES="fib hashloop" benchmarks/bench_wsl.sh
 ```
 
 ## Métrica y validez

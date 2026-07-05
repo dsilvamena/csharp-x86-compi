@@ -1,7 +1,9 @@
 .docker-build/
+.wsl-build/
 build/
 compiler
 compiler.exe
 outputs/
 .DS_Store
 enunciado_proyecto2.md
+Sem15_code/

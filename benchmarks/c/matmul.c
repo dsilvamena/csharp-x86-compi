@@ -1,15 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 int main(void) {
-    int n = 200;
-    int *a = (int *)malloc((size_t)n * n * sizeof(int));
-    int *b = (int *)malloc((size_t)n * n * sizeof(int));
-    int *c = (int *)malloc((size_t)n * n * sizeof(int));
+    int64_t n = 200;
+    int64_t *a = (int64_t *)malloc((size_t)n * (size_t)n * sizeof(int64_t));
+    int64_t *b = (int64_t *)malloc((size_t)n * (size_t)n * sizeof(int64_t));
+    int64_t *c = (int64_t *)malloc((size_t)n * (size_t)n * sizeof(int64_t));
 
-    int i = 0;
+    int64_t i = 0;
     while (i < n) {
-        int j = 0;
+        int64_t j = 0;
         while (j < n) {
             a[i * n + j] = (i + j) % 100;
             b[i * n + j] = (i * j + 1) % 100;
@@ -21,10 +23,10 @@ int main(void) {
 
     i = 0;
     while (i < n) {
-        int j = 0;
+        int64_t j = 0;
         while (j < n) {
-            int sum = 0;
-            int k = 0;
+            int64_t sum = 0;
+            int64_t k = 0;
             while (k < n) {
                 sum = sum + a[i * n + k] * b[k * n + j];
                 k = k + 1;
@@ -35,7 +37,7 @@ int main(void) {
         i = i + 1;
     }
 
-    printf("%d\n", c[(n - 1) * n + (n - 1)]);
+    printf("%" PRId64 "\n", c[(n - 1) * n + (n - 1)]);
     free(a);
     free(b);
     free(c);

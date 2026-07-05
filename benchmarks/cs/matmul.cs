@@ -1,7 +1,8 @@
 // Benchmark: 2D arrays, nested loops, integer multiply (cache + arithmetic).
 // Multiplica dos matrices NxN llenadas de forma deterministica e imprime
 // el elemento inferior derecho del resultado como checksum.
-// Los valores se mantienen acotados para evitar desbordar int32.
+// Los valores se mantienen acotados para que el ancho del entero no cambie
+// la salida esperada.
 class Program {
     static int Main() {
         int n = 200;

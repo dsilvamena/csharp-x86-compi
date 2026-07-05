@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# bench_inner.sh — Corre DENTRO del contenedor Linux x86-64 (gcc:13).
+# bench_inner.sh — Corre DENTRO del contenedor Linux x86-64.
 # No lo invoques directo en macOS; usa: benchmarks/bench.sh
 #
 # Para cada benchmark mide, en cada configuracion de compilador:
@@ -16,6 +16,7 @@
 #   gcc-O0     : gcc -O0
 #   gcc-O2     : gcc -O2
 #   clang-O2   : clang -O2   (si clang esta disponible)
+#   dotnet-aot : .NET Native AOT (si dotnet esta disponible)
 # =============================================================================
 set -eu
 
@@ -23,6 +24,7 @@ COMPILER="${COMPILER:-./.docker-build/compiler}"
 BENCHES="${BENCHES:-fib hashloop sieve matmul}"
 CS_DIR=benchmarks/cs
 C_DIR=benchmarks/c
+DOTNET_DIR=benchmarks/dotnet
 OUT=benchmarks/results
 WORK="$OUT/work"
 mkdir -p "$WORK"
@@ -32,6 +34,8 @@ MD="$OUT/results.md"
 
 HAVE_CLANG=0
 if command -v clang >/dev/null 2>&1; then HAVE_CLANG=1; fi
+HAVE_DOTNET=0
+if command -v dotnet >/dev/null 2>&1; then HAVE_DOTNET=1; fi
 
 # --- helper: mide el mejor tiempo (ns) de correr un comando N veces ----------
 timeit() {
@@ -59,6 +63,39 @@ build_gcc() { # <bench> <level>
 }
 build_clang() { # <bench>
   clang -O2 "$C_DIR/$1.c" -o "$WORK/$1.clang2" >/dev/null 2>&1
+}
+prepare_dotnet() { # <bench>
+  local bench="$1"
+  local dir="$WORK/dotnet/$bench"
+  local proj="$WORK/dotnet/$bench/$bench.csproj"
+  rm -rf "$dir"
+  mkdir -p "$dir"
+  cp "$DOTNET_DIR/$bench.cs" "$dir/Program.cs"
+  cat > "$proj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OptimizationPreference>Speed</OptimizationPreference>
+  </PropertyGroup>
+</Project>
+EOF
+  DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 \
+    dotnet restore "$proj" -r linux-x64 >/dev/null 2>&1
+}
+build_dotnet_aot() { # <bench>
+  local bench="$1"
+  local dir="$WORK/dotnet/$bench"
+  local proj="$WORK/dotnet/$bench/$bench.csproj"
+  rm -rf "$dir/bin" "$WORK/$bench.dotnet-aot-pub" "$WORK/$bench.dotnet-aot"
+  DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 \
+    dotnet publish "$proj" -c Release -r linux-x64 --self-contained true \
+      --no-restore -o "$WORK/$bench.dotnet-aot-pub" >/dev/null 2>&1
+  cp "$WORK/$bench.dotnet-aot-pub/$bench" "$WORK/$bench.dotnet-aot"
 }
 
 echo "benchmark,config,output,compile_ms,run_ms,asm_lines,bin_bytes" > "$CSV"
@@ -91,6 +128,7 @@ for b in $BENCHES; do
   gcc   -O0 -S "$C_DIR/$b.c" -o "$WORK/$b.gcc0.s"   2>/dev/null || true
   gcc   -O2 -S "$C_DIR/$b.c" -o "$WORK/$b.gcc2.s"   2>/dev/null || true
   [ "$HAVE_CLANG" = 1 ] && clang -O2 -S "$C_DIR/$b.c" -o "$WORK/$b.clang2.s" 2>/dev/null || true
+  [ "$HAVE_DOTNET" = 1 ] && prepare_dotnet "$b"
 
   run_config "$b" mine-noopt "$WORK/$b.noopt" "$WORK/$b.noopt.s" build_mine "$b" --no-opt noopt
   run_config "$b" mine-opt   "$WORK/$b.opt"   "$WORK/$b.opt.s"   build_mine "$b" --opt   opt
@@ -98,6 +136,9 @@ for b in $BENCHES; do
   run_config "$b" gcc-O2     "$WORK/$b.gcc2"  "$WORK/$b.gcc2.s"  build_gcc  "$b" 2
   if [ "$HAVE_CLANG" = 1 ]; then
     run_config "$b" clang-O2 "$WORK/$b.clang2" "$WORK/$b.clang2.s" build_clang "$b"
+  fi
+  if [ "$HAVE_DOTNET" = 1 ]; then
+    run_config "$b" dotnet-aot "$WORK/$b.dotnet-aot" "" build_dotnet_aot "$b"
   fi
 done
 
@@ -114,7 +155,7 @@ awk -F, '
     cfgs[cfg]=1
   }
   END {
-    ncfg=split("mine-noopt mine-opt gcc-O0 gcc-O2 clang-O2", clist, " ")
+    ncfg=split("mine-noopt mine-opt gcc-O0 gcc-O2 clang-O2 dotnet-aot", clist, " ")
     print "# Resultados de benchmarks\n"
     print "Tiempos en milisegundos (mejor de 3 compilaciones / 5 ejecuciones).\n"
     for (i=1;i<=n;i++) {
@@ -137,3 +178,4 @@ echo
 echo "CSV : $CSV"
 echo "MD  : $MD"
 [ "$HAVE_CLANG" = 1 ] || echo "NOTA: clang no estaba disponible; se omitio clang-O2."
+[ "$HAVE_DOTNET" = 1 ] || echo "NOTA: dotnet no estaba disponible; se omitio dotnet-aot."

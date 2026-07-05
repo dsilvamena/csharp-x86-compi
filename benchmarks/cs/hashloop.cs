@@ -1,7 +1,7 @@
 // Benchmark: tight arithmetic loop with a data dependency (multiply-accumulate).
 // La dependencia h = h*31 + i impide que el compilador cierre el bucle en
-// forma analitica, forzando ~10^8 iteraciones reales. El desbordamiento
-// de int32 se envuelve igual en C# y en C (complemento a dos).
+// forma analitica, forzando ~10^8 iteraciones reales. En este compilador,
+// int se implementa como entero de 64 bits.
 class Program {
     static int Main() {
         int h = 0;
