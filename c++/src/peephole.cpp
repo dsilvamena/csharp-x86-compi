@@ -12,7 +12,7 @@ std::string trim(const std::string &s) {
 bool isLabel(const std::string &t) { return !t.empty() && t.back() == ':'; }
 bool isDirective(const std::string &t) { return !t.empty() && t[0] == '.'; }
 bool startsWith(const std::string &t, const std::string &p) { return t.rfind(p, 0) == 0; }
-}  // namespace
+}
 
 std::string peephole(const std::string &asmText, int *removed) {
   std::vector<std::string> lines;
@@ -23,17 +23,17 @@ std::string peephole(const std::string &asmText, int *removed) {
   }
   int rem = 0;
 
-  // ---- (1) Código inalcanzable tras jmp/ret hasta la siguiente etiqueta ----
+  // Reglas: código inalcanzable, mov redundante y salto a la siguiente etiqueta.
   std::vector<std::string> a;
   bool skipping = false;
   for (auto &ln : lines) {
     std::string t = trim(ln);
     if (skipping) {
-      if (isLabel(t) || isDirective(t)) {  // recuperamos el flujo
+      if (isLabel(t) || isDirective(t)) {
         skipping = false;
         a.push_back(ln);
       } else {
-        rem++;  // instrucción inalcanzable: se descarta
+        rem++;
       }
       continue;
     }
@@ -41,7 +41,6 @@ std::string peephole(const std::string &asmText, int *removed) {
     if (startsWith(t, "jmp ") || t == "ret") skipping = true;
   }
 
-  // ---- (2) movq %rX, %rX redundante ----
   std::vector<std::string> b;
   for (auto &ln : a) {
     std::string t = trim(ln);
@@ -59,18 +58,16 @@ std::string peephole(const std::string &asmText, int *removed) {
     else b.push_back(ln);
   }
 
-  // ---- (3) jmp L seguido inmediatamente por L: ----
   std::vector<std::string> c;
   for (size_t i = 0; i < b.size(); i++) {
     std::string t = trim(b[i]);
     if (startsWith(t, "jmp ")) {
       std::string target = trim(t.substr(4));
-      // siguiente línea no vacía
       size_t j = i + 1;
       while (j < b.size() && trim(b[j]).empty()) j++;
       if (j < b.size() && trim(b[j]) == target + ":") {
         rem++;
-        continue;  // descartamos el jmp; la etiqueta queda
+        continue;
       }
     }
     c.push_back(b[i]);

@@ -11,6 +11,7 @@ int SethiUllmanVisitor::visit(IdExp *e) { e->label = 1; return 0; }
 int SethiUllmanVisitor::visit(BinaryExp *e) {
   e->left->accept(this);
   e->right->accept(this);
+  // Si ambos lados cuestan igual, evaluar uno obliga a guardar el otro: sube la etiqueta.
   e->label = e->left->label == e->right->label
              ? e->left->label + 1
              : std::max(e->left->label, e->right->label);

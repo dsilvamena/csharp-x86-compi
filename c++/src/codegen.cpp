@@ -5,6 +5,7 @@
 namespace {
 const char *ARG_REGS[6] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 
+// Se respeta la convencion System V AMD64: stack alineado a 16 bytes en llamadas.
 int align16(int n) { return (n + 15) & ~15; }
 
 std::string escapeForAsm(const std::string &s) {
@@ -78,6 +79,7 @@ void collectExp(Exp *e, std::vector<std::string> &lits) {
 }
 
 void GenCodeVisitor::collectStrings(Program *p) {
+  // Los literales string se levantan a .data y las expresiones guardan su etiqueta.
   for (auto c : p->classes)
     for (auto m : c->methods)
       collectStm(m->body, stringLits);
@@ -107,6 +109,7 @@ int GenCodeVisitor::visit(BinaryExp *e) {
     return 0;
   }
   if (e->op == AND_OP || e->op == OR_OP) {
+    // && y || usan saltos para conservar evaluacion corta.
     std::string lend = newLabel("bool_end");
     std::string lset = newLabel("bool_set");
     e->left->accept(this);
@@ -130,6 +133,7 @@ int GenCodeVisitor::visit(BinaryExp *e) {
   Exp *first = e->left, *second = e->right;
   bool commutative = (e->op == ADD_OP || e->op == MUL_OP || e->op == EQ_OP || e->op == NE_OP);
   if (optimize && commutative && e->right->label > e->left->label) {
+    // Con Sethi-Ullman se evalua primero el lado mas costoso para reducir temporales.
     first = e->right;
     second = e->left;
   }
@@ -181,6 +185,7 @@ int GenCodeVisitor::visit(CallExp *e) {
     throw CompileError("semantico", "el codegen soporta hasta 6 argumentos (metodo '" +
                        e->name + "')", e->line, e->col);
   int nslots = (int)n + ((int)n % 2);
+  // Los argumentos se evaluan primero en la pila para no pisar registros entre expresiones.
   if (nslots > 0) code << "  subq $" << (8 * nslots) << ", %rsp\n";
   for (size_t k = 0; k < n; k++) {
     e->args[k]->accept(this);
@@ -251,6 +256,7 @@ int GenCodeVisitor::visit(NewMatrixExp *e) {
 
 void GenCodeVisitor::emitMatrixLinearIndex(MatrixAccessExp *e) {
   long cols = matrixCols.count(e->name) ? matrixCols[e->name] : 0;
+  // Una matriz 2D se guarda linealmente: offset = fila * columnas + columna.
   e->rowIdx->accept(this);
   code << "  movq $" << cols << ", %rcx\n  imulq %rcx, %rax\n";
   code << "  subq $16, %rsp\n  movq %rax, (%rsp)\n";
@@ -275,6 +281,7 @@ void GenCodeVisitor::emitLoc(int line) {
 }
 
 int GenCodeVisitor::visit(Block *s) {
+  // Al salir del bloque se restauran los simbolos visibles para respetar scopes.
   auto savedOff = varOffset;
   auto savedTy = varType;
   for (auto st : s->stms) { emitLoc(st->line); st->accept(this); }
@@ -457,6 +464,7 @@ int GenCodeVisitor::visit(MethodDecl *d) {
 
   int locals = countVars(d->body);
   int nparams = (int)d->params.size();
+  // El marco de pila reserva espacio fijo para parametros copiados y variables locales.
   int frame = align16((locals + nparams) * 8);
 
   if (label == "main") code << ".globl main\n";

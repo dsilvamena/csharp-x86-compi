@@ -26,6 +26,7 @@ void Lexer::advance() {
 }
 
 void Lexer::skipSpacesAndComments() {
+  // El lexer descarta espacios y comentarios antes de producir el siguiente token.
   while (!atEnd()) {
     char c = current();
     if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
@@ -121,6 +122,7 @@ Token Lexer::makeChar() {
   if (current() != '\'')
     throw CompileError("lexico", "literal de caracter mal formado (se esperaba ')", line, col);
   advance();
+  // Se guarda el char como entero para que las fases siguientes lo traten como valor numerico.
   return Token(Token::CHARLIT, std::to_string((int)(unsigned char)value), startLine, startCol);
 }
 
@@ -158,6 +160,7 @@ Token Lexer::nextToken() {
   if (c == '\'') return makeChar();
   if (c == '"') return makeString();
 
+  // Los operadores de dos caracteres se reconocen antes que su prefijo de uno.
   switch (c) {
     case '=':
       if (peek() == '=') { advance(); advance(); return Token(Token::EQ, "==", L, C); }

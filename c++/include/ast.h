@@ -17,6 +17,7 @@ const char *binaryOpName(BinaryOp op);
 
 class Exp {
 public:
+    // Metadatos compartidos por varios pases: folding, Sethi-Ullman y chequeo semantico.
   bool isConstant = false;
   long constantValue = 0;
   int label = 0;
@@ -70,6 +71,7 @@ public:
   BinaryOp op;
   BinaryExp(Exp *l, Exp *r, BinaryOp o) : left(l), right(r), op(o) {}
   int accept(Visitor *v) override;
+  // El AST es dueño de sus hijos; al borrar un nodo se libera todo el subarbol.
   ~BinaryExp() override { delete left; delete right; }
 };
 
@@ -99,7 +101,6 @@ public:
   int accept(Visitor *v) override;
 };
 
-// Dirección de una variable: &x  (solo en contexto unsafe). Resultado: T*.
 class AddressOfExp : public Exp {
 public:
   std::string name;
@@ -107,7 +108,6 @@ public:
   int accept(Visitor *v) override;
 };
 
-// Desreferencia: *p  (lee/escribe la memoria apuntada; solo en unsafe).
 class DerefExp : public Exp {
 public:
   Exp *ptr;
@@ -116,7 +116,6 @@ public:
   ~DerefExp() override { delete ptr; }
 };
 
-// Cast explícito: (T)operando.  Soporta conversiones numéricas int/char.
 class CastExp : public Exp {
 public:
   std::string targetType;
@@ -283,7 +282,6 @@ public:
   int accept(Visitor *v) override;
 };
 
-// Bloque unsafe: habilita operaciones con punteros (&x, *p) en su cuerpo.
 class UnsafeStm : public Stm {
 public:
   Block *body;
@@ -329,6 +327,7 @@ public:
   std::vector<StructDecl *> structs;
   std::vector<ClassDecl *> classes;
   int accept(Visitor *v);
+  // Punto raiz: su destructor termina liberando clases, metodos, bloques y expresiones.
   ~Program() {
     for (auto s : structs) delete s;
     for (auto c : classes) delete c;

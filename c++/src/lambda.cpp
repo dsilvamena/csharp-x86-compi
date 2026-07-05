@@ -22,7 +22,7 @@ std::string inferRet(Exp *body) {
 
 struct Lifter {
   int counter;
-  std::map<std::string, std::string> bindings;  // variable -> función generada
+  std::map<std::string, std::string> bindings;
   std::vector<MethodDecl *> generated;
   explicit Lifter(int c) : counter(c) {}
 
@@ -40,6 +40,7 @@ struct Lifter {
   }
 
   void generateFor(const std::string &varName, LambdaExp *lam) {
+    // La lambda se baja a un metodo estatico generado y las llamadas usan ese nombre.
     std::string gen = "__lambda" + std::to_string(counter++);
     auto *m = new MethodDecl();
     m->isStatic = true;
@@ -93,6 +94,7 @@ struct Lifter {
     for (auto st : b->stms) {
       auto vd = dynamic_cast<VarDecStm *>(st);
       if (vd && bindings.count(vd->name) && dynamic_cast<LambdaExp *>(vd->init)) {
+        // La declaracion original ya fue reemplazada por el metodo generado.
         delete st;
         continue;
       }
@@ -112,7 +114,7 @@ struct Lifter {
   }
 };
 
-}  // namespace
+}
 
 void liftLambdas(Program *p) {
   int counter = 0;

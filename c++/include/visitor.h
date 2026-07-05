@@ -19,6 +19,7 @@ class BreakStm; class UnsafeStm; class StructDecl; class MethodDecl; class Class
 
 class Visitor {
 public:
+  // La misma interfaz permite recorrer el AST con pases distintos sin cambiar los nodos.
   virtual ~Visitor() = default;
   virtual int visit(NumberExp *e) = 0;
   virtual int visit(BoolExp *e) = 0;
@@ -57,11 +58,12 @@ public:
 class TypeCheckerVisitor : public Visitor {
   Environment env;
   Environment constEnv;
+  // Primero se registran firmas y structs; luego se validan cuerpos y expresiones.
   std::unordered_map<std::string, MethodDecl *> methods;
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> structs;
   std::string currentReturnType;
   int loopDepth = 0;
-  int unsafeDepth = 0;   // >0 dentro de un bloque unsafe (habilita &x, *p)
+  int unsafeDepth = 0;
   std::string lastType;
 
   std::string typeOf(Exp *e);
@@ -107,6 +109,7 @@ public:
 class ConstantVisitor : public Visitor {
 public:
   int folded = 0;
+  // Marca expresiones constantes; el codegen usa esa marca para emitir inmediatos.
   void optimize(Program *p) { p->accept(this); }
 
   int visit(NumberExp *e) override;
@@ -145,6 +148,7 @@ public:
 
 class SethiUllmanVisitor : public Visitor {
 public:
+  // Calcula el costo de evaluar subexpresiones para elegir mejor el orden de emision.
   void compute(Program *p) { p->accept(this); }
 
   int visit(NumberExp *e) override;
@@ -184,6 +188,7 @@ public:
 class GenCodeVisitor : public Visitor {
   std::ostringstream code;
   std::vector<std::string> stringLits;
+  // Variables locales como offsets relativos a %rbp dentro del marco de pila.
   std::unordered_map<std::string, int> varOffset;
   std::unordered_map<std::string, std::string> varType;
   std::unordered_map<std::string, std::unordered_map<std::string, int>> structFieldIndex;

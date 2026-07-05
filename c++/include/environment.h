@@ -1,23 +1,13 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
-// =============================================================================
-// environment.h — Tabla de símbolos con alcance anidado.
-// =============================================================================
-// Pila de tablas hash (ribs); cada nivel es un scope (método o bloque).
-//   add_level/remove_level  — abrir/cerrar scope
-//   add_var                 — declarar en el scope actual
-//   add_var_current_only    — ¿ya existe en el scope MÁS interno? (redeclaración)
-//   check / lookup / update — consultar/actualizar buscando del scope interno
-//                             al externo (sombreado permitido).
-// =============================================================================
-
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 class Environment {
 private:
+  // Cada rib representa un scope; se busca desde el scope mas interno hacia afuera.
   std::vector<std::unordered_map<std::string, std::string>> ribs;
 
   int search_rib(const std::string &name) const {
@@ -39,7 +29,6 @@ public:
     if (!ribs.empty()) ribs.back()[name] = value;
   }
 
-  // ¿La variable ya está declarada en el scope MÁS interno? (para redeclaración)
   bool exists_in_current(const std::string &name) const {
     return !ribs.empty() && ribs.back().count(name) > 0;
   }
@@ -61,4 +50,4 @@ public:
   }
 };
 
-#endif // ENVIRONMENT_H
+#endif

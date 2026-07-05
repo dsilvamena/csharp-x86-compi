@@ -22,12 +22,14 @@ std::string stripSuffix(const std::string &t) {
 }
 
 std::string TypeCheckerVisitor::typeOf(Exp *e) {
+  // Cada visit actualiza lastType; typeOf centraliza esa convencion.
   e->accept(this);
   e->inferredType = lastType;
   return lastType;
 }
 
 bool TypeCheckerVisitor::isType(const std::string &t) const {
+  // Arreglos, matrices y punteros validan primero su tipo base.
   std::string base = stripSuffix(t);
   if (base != t) return isType(base);
   return t == "int" || t == "char" || t == "bool" || t == "string" ||
@@ -157,7 +159,7 @@ int TypeCheckerVisitor::visit(DerefExp *e) {
   if (pt.empty() || pt.back() != '*')
     throw CompileError("semantico", "no se puede desreferenciar un no-puntero (" + pt + ")",
                        e->line, e->col);
-  e->inferredType = lastType = pt.substr(0, pt.size() - 1);  // tipo apuntado
+  e->inferredType = lastType = pt.substr(0, pt.size() - 1);
   return 0;
 }
 
@@ -253,6 +255,7 @@ int TypeCheckerVisitor::visit(VarDecStm *s) {
     throw CompileError("semantico", "una matriz 2D debe inicializarse con 'new T[r,c]'",
                        s->line, s->col);
   env.add_var(s->name, declared);
+  // constEnv guarda solo si el identificador es reasignable o no.
   constEnv.add_var(s->name, s->isConst ? "1" : "0");
   return 0;
 }
@@ -271,7 +274,7 @@ int TypeCheckerVisitor::visit(AssignStm *s) {
              dynamic_cast<ArrayAccessExp *>(s->target) ||
              dynamic_cast<MatrixAccessExp *>(s->target) ||
              dynamic_cast<DerefExp *>(s->target)) {
-    tt = typeOf(s->target);  // valida campo/índice/puntero y anota inferredType
+    tt = typeOf(s->target);
   } else {
     throw CompileError("semantico", "el lado izquierdo de '=' no es asignable", s->line, s->col);
   }
@@ -317,6 +320,7 @@ int TypeCheckerVisitor::visit(DoWhileStm *s) {
 }
 
 int TypeCheckerVisitor::visit(ForStm *s) {
+  // El init del for vive en un scope propio, como en C#/C.
   env.add_level();
   constEnv.add_level();
   if (s->init) s->init->accept(this);
@@ -398,6 +402,7 @@ int TypeCheckerVisitor::visit(ClassDecl *d) {
 }
 
 int TypeCheckerVisitor::visit(Program *p) {
+  // Registro en dos pasadas para permitir referencias a structs y metodos declarados despues.
   for (auto sd : p->structs) {
     if (structs.count(sd->name))
       throw CompileError("semantico", "estructura duplicada: '" + sd->name + "'", 0, 0);

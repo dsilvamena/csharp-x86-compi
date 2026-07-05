@@ -1,13 +1,6 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-// =============================================================================
-// lexer.h — Analizador léxico.
-// =============================================================================
-// Reconoce el subconjunto de C#: keywords, identificadores, enteros, char y
-// string con escapes básicos, operadores, delimitadores y comentarios // y /* */.
-// =============================================================================
-
 #include <string>
 #include "token.h"
 
@@ -18,11 +11,11 @@ private:
   int line = 1;
   int col = 1;
 
-  char current() const;          // carácter actual ('\0' si fin)
-  char peek(int k = 1) const;    // carácter k posiciones adelante
-  void advance();                // avanza un carácter actualizando línea/col
+  char current() const;
+  char peek(int k = 1) const;
+  void advance();
   bool atEnd() const;
-  void skipSpacesAndComments();  // espacios + // y /* ... */
+  void skipSpacesAndComments();
 
   Token makeIdOrKeyword();
   Token makeNumber();
@@ -31,7 +24,7 @@ private:
 
 public:
   explicit Lexer(const std::string &source);
-  Token nextToken();   // siguiente token; END al terminar
+  Token nextToken();
 };
 
-#endif // LEXER_H
+#endif

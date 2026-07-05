@@ -5,4 +5,4 @@ class Program;
 
 void liftLambdas(Program *p);
 
-#endif // LAMBDA_H
+#endif

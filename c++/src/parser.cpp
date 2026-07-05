@@ -20,6 +20,7 @@ void Parser::advance() {
 }
 
 const Token &Parser::peek(size_t n) {
+  // Buffer minimo de prelectura para distinguir declaraciones, lambdas y casts.
   while (lookahead.size() < n) lookahead.push_back(lexer.nextToken());
   return lookahead[n - 1];
 }
@@ -52,6 +53,7 @@ bool Parser::isTypeStart() const {
 }
 
 bool Parser::looksLikeVarDecl() {
+  // En este subconjunto, "ID ID" tambien puede iniciar una declaracion de struct.
   if (isTypeStart() || check(Token::VAR) || check(Token::CONST)) return true;
   if (check(Token::ID)) {
     if (structNames.count(current.text)) return true;
@@ -77,7 +79,7 @@ std::string Parser::parseType() {
     expect(Token::RBRACKET, "se esperaba ']' en el tipo de matriz");
     base += "[,]";
   }
-  // Sufijo de puntero (unsafe): int*, Point*, ...
+  // Los punteros se modelan como sufijos de tipo: int*, Point*, etc.
   while (match(Token::MUL)) base += "*";
   return base;
 }
@@ -340,6 +342,7 @@ Exp *Parser::parseExpr() {
 }
 
 Exp *Parser::parseLogicalOr() {
+  // La cadena parseLogicalOr -> ... -> parsePrimary implementa precedencia de operadores.
   Exp *e = parseLogicalAnd();
   while (check(Token::OR)) {
     int L = current.line, C = current.col;
@@ -423,6 +426,7 @@ Exp *Parser::parseMultiplicative() {
 }
 
 bool Parser::looksLikeLambda() {
+  // Las lambdas aceptadas tienen parametros tipados: (int x, int y) => expr.
   if (!check(Token::LPAREN)) return false;
   if (peek(1).type == Token::RPAREN)
     return peek(2).type == Token::ARROW;
@@ -464,13 +468,13 @@ Exp *Parser::parseLambda() {
 
 Exp *Parser::parseUnary() {
   if (looksLikeLambda()) return parseLambda();
-  // Cast explícito: '(' Tipo ')' Unary.  Se distingue de un paréntesis de
-  // agrupación porque tras '(' viene un token de tipo primitivo (lookahead).
+  // Un cast y una expresión entre paréntesis empiezan igual; la prelectura
+  // de tipo primitivo basta para el subconjunto aceptado.
   if (check(Token::LPAREN)) {
     Token::Type nt = peek().type;
     if (nt == Token::INT || nt == Token::CHAR || nt == Token::BOOL || nt == Token::STRING) {
       int L = current.line, C = current.col;
-      advance();  // (
+      advance();
       std::string t = parseType();
       expect(Token::RPAREN, "se esperaba ')' tras el tipo del cast");
       Exp *operand = parseUnary();
@@ -488,7 +492,6 @@ Exp *Parser::parseUnary() {
     u->line = L; u->col = C;
     return u;
   }
-  // &x : dirección de una variable (unsafe).
   if (check(Token::AMP)) {
     int L = current.line, C = current.col;
     advance();
@@ -497,7 +500,6 @@ Exp *Parser::parseUnary() {
     a->line = L; a->col = C;
     return a;
   }
-  // *p : desreferencia (unsafe).  En posición unaria, no es multiplicación.
   if (check(Token::MUL)) {
     int L = current.line, C = current.col;
     advance();

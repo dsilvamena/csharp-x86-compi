@@ -32,6 +32,7 @@ int ConstantVisitor::visit(BinaryExp *e) {
   e->left->accept(this);
   e->right->accept(this);
   long v = 0;
+  // No se pliega division/modulo por cero: se deja para conservar el comportamiento en ejecucion.
   if (e->left->isConstant && e->right->isConstant &&
       evalBinary(e->left->constantValue, e->right->constantValue, e->op, v)) {
     e->isConstant = true;
@@ -60,7 +61,7 @@ int ConstantVisitor::visit(CastExp *e) {
   e->isConstant = false;
   if (!e->operand->isConstant) return 0;
   long v = e->operand->constantValue;
-  e->constantValue = (e->targetType == "char") ? (v & 0xFF) : v;  // (int): identidad
+  e->constantValue = (e->targetType == "char") ? (v & 0xFF) : v;
   e->isConstant = true;
   folded++;
   return 0;

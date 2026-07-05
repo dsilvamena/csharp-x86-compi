@@ -1,20 +1,12 @@
 #ifndef ERRORS_H
 #define ERRORS_H
 
-// =============================================================================
-// errors.h — Excepción uniforme de compilación (fase + línea + columna).
-// =============================================================================
-// Centraliza errores léxicos, sintácticos y semánticos con fase, línea y
-// columna. Evita duplicar el formato en lexer/parser/typechecker y permite que
-// main.cpp maneje todos los fallos desde un único punto.
-// =============================================================================
-
 #include <stdexcept>
 #include <string>
 
 class CompileError : public std::runtime_error {
 public:
-  std::string phase;    // "lexico" | "sintactico" | "semantico"
+  std::string phase;
   std::string message;
   int line;
   int col;
@@ -31,4 +23,4 @@ private:
   }
 };
 
-#endif // ERRORS_H
+#endif
