@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+/* Offline fonts (no CDN) — Geist for UI, Geist Mono for code, Instrument Serif for the hero accent. */
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+@import "@fontsource/instrument-serif/400-italic.css";
+
+/* ---------------------------------------------------------------------------
+   Direction A — "Editorial dark IDE / Linear-style", accent violet #8B7CF6.
+   Tokens mirror packages/web/design/target-mockup.html exactly.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #0a0b0d;
+  --color-bg2: #0c0d10;
+  --color-panel: #111316;
+  --color-panel2: #16181c;
+  --color-elev: #1a1d22;
+
+  --color-text: #ecedef;
+  --color-text2: #9a9da5;
+  --color-text3: #686b73;
+
+  --color-accent: #8b7cf6;
+  --color-accent-hover: #9d90f8;
+
+  --color-kw: #8b7cf6;
+  --color-type: #5cc9c0;
+  --color-str: #9dce6a;
+  --color-num: #e0a458;
+  --color-com: #5e626b;
+  --color-fn: #6fa8ff;
+  --color-punct: #9a9da5;
+
+  --color-success: #4fb872;
+  --color-error: #f0584b;
+  --color-warning: #e0a458;
+  --color-info: #6fa8ff;
+
+  /* AST node accents — blue/amber so they never read as the violet brand. */
+  --color-ast-node: #6fa8ff;
+  --color-ast-leaf: #e0a458;
+
+  --font-sans: "Geist Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  /* Strong custom easings (emil-design-eng): the built-in curves lack punch. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --border: rgba(255, 255, 255, 0.07);
+  --border2: rgba(255, 255, 255, 0.045);
+  --accent-glow: rgba(139, 124, 246, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv01", "ss01";
+}
+
+/* Hairline borders use the translucent values from the mockup. */
+.border-hair {
+  border-color: var(--border);
+}
+.border-hair2 {
+  border-color: var(--border2);
+}
+
+/* Thin, unobtrusive scrollbars for the dense code/data panels. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: padding-box;
+}
+
+/* Hero glow halo. */
+.hero-glow::before {
+  content: "";
+  position: absolute;
+  top: -160px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 760px;
+  height: 320px;
+  background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+/* The currently-executing asm line, highlighted by the virtual RIP. */
+.rip-line {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* Source ↔ IR ↔ asm provenance — lines sharing the hovered source line get a
+   faint accent wash (distinct from, and weaker than, the RIP highlight). */
+.prov-line {
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+/* Monaco whole-line decoration for the matching source line. */
+.prov-editor-line {
+  background: color-mix(in srgb, var(--color-accent) 11%, transparent);
+}
+/* The source line currently executing in the simulator (editor auto-follows it). */
+.exec-editor-line {
+  background: color-mix(in srgb, var(--color-accent) 17%, transparent);
+}
+.exec-editor-glyph::before {
+  content: "▸";
+  color: var(--color-accent);
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* Time-travel scrubber — accent thumb on a hairline track. */
+.prov-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.prov-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-elev);
+}
+.prov-range::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-elev);
+}
+.prov-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -4px;
+  height: 11px;
+  width: 11px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  transition: box-shadow 150ms var(--ease-out-strong);
+}
+.prov-range::-moz-range-thumb {
+  height: 11px;
+  width: 11px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+.prov-range:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
+/* Register value flash when it changes (single subtle pulse). */
+@keyframes reg-flash {
+  0% {
+    color: var(--color-accent);
+  }
+  100% {
+    color: var(--color-text);
+  }
+}
+.reg-flash {
+  animation: reg-flash 600ms var(--ease-out-strong);
+}
+
+/* Cross-fade for inspector view changes. */
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.view-in {
+  animation: view-in 200ms var(--ease-out-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
