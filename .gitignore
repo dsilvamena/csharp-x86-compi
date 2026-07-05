@@ -1,7 +1,67 @@
-.docker-build/
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.out
 build/
-compiler
-compiler.exe
-outputs/
+dist/
+bin/
+obj/
+
+# C++ specific
+*.gch
+*.pch
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile.local
+
+# Node.js / npm
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# TypeScript
+*.tsbuildinfo
+dist/
+*.js
+# Un-ignore source JS at any depth (p. ej. el simulador en
+# typescript/packages/web/src/sim/simulator.js). Ojo: una negación con '/' se
+# ancla a la ubicación del .gitignore, por eso hace falta el '**/' inicial —
+# '!src/**/*.js' solo alcanzaría un 'src/' de primer nivel.
+!**/src/**/*.js
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
-enunciado_proyecto2.md
+*.sublime-workspace
+*.sublime-project
+
+# OS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.log
+
+# Test outputs (keep fixtures, but ignore generated test artifacts)
+tests/*.run
+tests/*.asm
+tests/*.ir
+tests/*.ast
+tests/*.symbols
+tests/*.tokens
+tests/*.opt

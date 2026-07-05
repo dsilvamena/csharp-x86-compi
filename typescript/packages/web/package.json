@@ -1,0 +1,36 @@
+{
+  "name": "@cstudio/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "C# x86 Compiler Studio — web app (React + Vite + Tailwind). Compiles via the C++ backend; bundles a client-side x86 simulator.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test:e2e": "playwright test",
+    "test:sim": "node --test src/sim/simulator.test.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/geist-mono": "^5.2.8",
+    "@fontsource/geist-sans": "^5.2.5",
+    "@fontsource/instrument-serif": "^5.2.8",
+    "@monaco-editor/react": "^4.7.0",
+    "lucide-react": "^1.18.0",
+    "monaco-editor": "^0.55.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  }
+}

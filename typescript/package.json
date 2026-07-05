@@ -1,0 +1,15 @@
+{
+  "name": "csharp-x86-compiler-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "C# x86 Compiler Studio — compiler for a limited subset of C# targeting x86-64, plus a web studio.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @cstudio/web",
+    "build": "npm run build -w @cstudio/web",
+    "preview": "npm run preview -w @cstudio/web",
+    "typecheck": "npm run typecheck -w @cstudio/web"
+  }
+}
