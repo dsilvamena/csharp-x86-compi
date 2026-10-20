@@ -5,28 +5,31 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // repo/typescript/packages/web → repo
 const repo = path.resolve(__dirname, '..', '..', '..');
-const compilerBin = path.join(repo, 'c++', 'compiler');
+const compilerBin = path.join(repo, 'c++', 'build', 'compiler');
 const backendDir = path.join(repo, 'backend');
+const webPort = Number(process.env.E2E_WEB_PORT || 5175);
+const backendPort = Number(process.env.E2E_BACKEND_PORT || 8789);
 
 // Two servers: the Node backend (spawns the C++ compiler --json) and the Vite dev
-// server (which proxies /api → :8787). The e2e drives the real binary end-to-end.
+// server on dedicated ports. The e2e drives the real binary end-to-end.
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
   fullyParallel: false,
-  use: { baseURL: 'http://localhost:5173', trace: 'on-first-retry' },
+  use: { baseURL: `http://127.0.0.1:${webPort}`, trace: 'on-first-retry' },
   webServer: [
     {
       command: `node ${path.join(backendDir, 'server.js')}`,
       cwd: backendDir,
-      port: 8787,
-      reuseExistingServer: !process.env.CI,
-      env: { COMPILER_BIN: compilerBin, PORT: '8787' },
+      port: backendPort,
+      reuseExistingServer: false,
+      env: { COMPILER_BIN: compilerBin, PORT: String(backendPort) },
     },
     {
-      command: 'npm run dev -- --port 5173',
-      port: 5173,
-      reuseExistingServer: !process.env.CI,
+      command: `npm run dev -- --host 127.0.0.1 --port ${webPort} --strictPort`,
+      url: `http://127.0.0.1:${webPort}`,
+      reuseExistingServer: false,
+      env: { BACKEND_URL: `http://127.0.0.1:${backendPort}` },
     },
   ],
 });

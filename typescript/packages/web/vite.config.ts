@@ -2,9 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-// The app is a static client: ALL compilation runs in the C++ binary behind the
-// Node backend (--json). No TypeScript compiler/simulator remains in the app, so
-// no workspace alias is needed.
+// Compilation runs in the C++ backend; x86 simulation runs in the browser.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {

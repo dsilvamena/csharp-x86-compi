@@ -3,7 +3,7 @@
 // solo se fija un tope de pasos pensado para el navegador y se reexpone el tipo
 // del snapshot para las vistas.
 //
-// Flujo de simulación (separado del flujo nativo real g++ -no-pie / Docker):
+// Flujo de simulación:
 //   compilador C++ → ensamblador AT&T (texto) → este simulador → snapshots.
 import { X86AttSimulator, type Snapshot } from '../sim/simulator.js';
 
@@ -12,7 +12,7 @@ export type { Snapshot } from '../sim/simulator.js';
 // Tope de pasos para la web: los programas del subconjunto académico terminan
 // en muy pocos pasos; este límite evita que un bucle pesado (p. ej. el benchmark
 // de 1e6 iteraciones) congele la pestaña. Al alcanzarlo, snapshot().error lo
-// indica y la UI sugiere ejecución nativa (Docker/WSL).
+// indica y la UI recomienda reducir el tamaño del programa.
 export const WEB_MAX_STEPS = 1_000_000;
 
 /** Crea un simulador para `asm` con el tope de pasos de la web. */

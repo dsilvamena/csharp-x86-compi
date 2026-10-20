@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // End-to-end against the REAL binary: Vite proxies /api → the Node backend, which
-// spawns `c++/compiler --json`. The default sample (Fibonacci) must compile and
+// spawns `c++/build/compiler --json`. The default sample (Fibonacci) must compile and
 // render across the tabs; an err_* program must surface the error contract.
 
 test('the default sample compiles and renders every tab', async ({ page }) => {
@@ -78,36 +78,12 @@ test('hovering a lower C# statement auto-scrolls the x86 listing to its block', 
   await expect(page.locator('.prov-line').first()).toBeInViewport();
 });
 
-test('the x86 tab native-run button assembles + executes in Docker and shows stdout', async ({ page }) => {
+test('the app only exposes browser simulation', async ({ page, request }) => {
   await page.goto('/');
-  // Wait for the default sample (Fibonacci → 6765) to compile (x86 is default tab).
-  await expect(page.locator('body')).toContainText('AT&T', { timeout: 15_000 });
-
-  // Oracle / native path: the x86 tab keeps a Docker run button (gcc:13).
-  await page.getByRole('button', { name: /Ejecutar \(Docker\)/ }).click();
-  // The "Salida" panel appears and shows the real program output (Docker run).
-  await expect(page.locator('body')).toContainText('Salida', { timeout: 25_000 });
-  await expect(page.locator('body')).toContainText('6765', { timeout: 25_000 });
-});
-
-test('POST /api/run returns the real native stdout', async ({ request }) => {
-  const source = `class Program {
-  static int Main() {
-    Console.WriteLine(2 + 3);
-    return 0;
-  }
-}`;
-  const res = await request.post('/api/run', {
-    headers: { 'content-type': 'application/json' },
-    data: { source },
-    timeout: 30_000,
-  });
-  expect(res.ok()).toBeTruthy();
-  const json = await res.json();
-  expect(json.compiled).toBe(true);
-  expect(json.ok).toBe(true);
-  expect(json.output).toContain('5');
-  expect(json.exitCode).toBe(0);
+  await expect(page.getByTestId('asm-listing')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Docker/ })).toHaveCount(0);
+  const res = await request.post('/api/run', { data: { source: '' } });
+  expect(res.status()).toBe(404);
 });
 
 test('backend returns the error contract for an invalid program', async ({ request }) => {

@@ -7,7 +7,7 @@ import { OptStrip } from './components/OptStrip';
 import { Card, CardHeader } from './components/primitives';
 import { StatusConsole } from './components/StatusConsole';
 import { consoleState } from './lib/console-state';
-import { compileViaBackend, emptyResult, runViaBackend, type RunResult, type WebResult } from './lib/api';
+import { compileViaBackend, emptyResult, type WebResult } from './lib/api';
 import { DEFAULT_SAMPLE, SAMPLES } from './samples';
 
 export default function App() {
@@ -18,10 +18,6 @@ export default function App() {
   const [result, setResult] = useState<WebResult>(emptyResult);
   const [busy, setBusy] = useState(false);
   const [backendDown, setBackendDown] = useState(false);
-
-  // Real native run (Fase 4): on-demand only, not on every keystroke.
-  const [run, setRun] = useState<RunResult | null>(null);
-  const [running, setRunning] = useState(false);
 
   // Provenance hover: the C# line under the cursor (from the editor or an asm
   // view). The editor decorates it and the asm views light up the lines that
@@ -43,28 +39,18 @@ export default function App() {
   useEffect(() => {
     const ctrl = new AbortController();
     setBusy(true);
+    setBackendDown(false);
     compileViaBackend(debounced, ctrl.signal)
       .then((r) => { setResult(r); setBackendDown(false); })
       .catch((e) => { if (e.name !== 'AbortError') setBackendDown(true); })
-      .finally(() => setBusy(false));
+      .finally(() => { if (!ctrl.signal.aborted) setBusy(false); });
     return () => ctrl.abort();
   }, [debounced]);
 
   const status = useMemo(() => consoleState(debounced, result), [debounced, result]);
 
-  // Reset the stale run output whenever the source changes (it no longer matches).
-  useEffect(() => { setRun(null); }, [debounced]);
-
-  // Native run (oracle): the program targets Linux ELF, so it is assembled +
-  // executed in Docker by the backend, on demand, from the x86 tab. Kept as a
-  // fidelity check / for heavy programs — not the primary button.
-  const doRun = () => {
-    if (!result.ok || running) return;
-    setRunning(true);
-    runViaBackend(source).then(setRun).finally(() => setRunning(false));
-  };
   // Primary "Ejecutar": run the generated AT&T in the in-browser JS simulator
-  // (Simulación tab); it executes on its own when the tab opens. No Docker.
+  // (Simulación tab); the debugger opens paused at the first instruction.
   const onRun = () => setTab('sim');
   const onOptimize = () => setTab('optimization');
 
@@ -82,9 +68,7 @@ export default function App() {
         <div className="pt-5">
           {backendDown && (
             <div className="mb-2 rounded-[8px] border border-error/30 bg-error/10 px-3 py-2 text-[12.5px] text-error">
-              No se pudo contactar al backend del compilador (C++). Inícialo con
-              <span className="mx-1 font-mono">cd backend &amp;&amp; npm start</span>
-              (requiere <span className="mx-1 font-mono">cd c++ &amp;&amp; make</span> antes).
+              El servicio de compilación no está disponible en este momento. Inténtalo de nuevo en unos instantes.
             </div>
           )}
           <StatusConsole state={status} busy={busy} />
@@ -115,9 +99,6 @@ export default function App() {
               result={result}
               active={tab}
               onTab={setTab}
-              run={run}
-              running={running}
-              onRun={doRun}
               hoverLine={hoverLine}
               onHoverAsm={setHoverLine}
               onExecLine={setExecLine}

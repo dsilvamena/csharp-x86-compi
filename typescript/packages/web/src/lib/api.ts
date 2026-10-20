@@ -1,7 +1,7 @@
 // Client for the Node backend, which forwards to the C++ compiler (--json).
 //
 // The C++ binary is the single source of truth; the web app no longer compiles
-// C# in-browser nor runs the program. `asm`/`asmOpt` arrive as ready-to-render
+// C# in-browser. The generated assembly runs in the browser simulator. `asm`/`asmOpt` arrive as ready-to-render
 // AT&T text; `ast` is the textual tree from printAst; tokens/optReport/errors are
 // structured. `metrics.compileTimeMs` is the real compile time.
 import type { AsmSourceMap, Diagnostic, OptReport, Token } from './compiler-types';
@@ -77,35 +77,9 @@ export async function compileViaBackend(source: string, signal?: AbortSignal): P
     body: JSON.stringify({ source }),
     signal,
   });
+  if (!res.ok) throw new Error(`El servicio de compilación respondió HTTP ${res.status}`);
   const raw = (await res.json()) as RawResult;
   return adapt(raw);
-}
-
-// --- ejecución real vía Docker (Fase 4, on-demand) -----------------------
-/** Result of POST /api/run: assemble + run the program inside gcc:13 (Docker). */
-export interface RunResult {
-  compiled: boolean;     // false ⇒ no compiló (no se ejecuta)
-  ok: boolean;           // true ⇒ ensambló y ejecutó sin timeout
-  output?: string;       // stdout real del programa
-  stderr?: string;       // errores de ensamblado (si los hay)
-  exitCode?: number;
-  timedOut?: boolean;
-  error?: string;        // fallo de Docker / timeout / red
-}
-
-/** Assemble + run `source` in Docker. Network/HTTP failures surface as `error`. */
-export async function runViaBackend(source: string, signal?: AbortSignal): Promise<RunResult> {
-  try {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source }),
-      signal,
-    });
-    return (await res.json()) as RunResult;
-  } catch (e) {
-    return { compiled: false, ok: false, error: `no se pudo contactar al backend: ${(e as Error).message}` };
-  }
 }
 
 export function emptyResult(): WebResult {

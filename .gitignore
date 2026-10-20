@@ -65,3 +65,9 @@ tests/*.ast
 tests/*.symbols
 tests/*.tokens
 tests/*.opt
+
+# Reproducible frontend installation for Vercel
+!typescript/package-lock.json
+.vercel/
+typescript/packages/web/playwright-report/
+typescript/packages/web/test-results/
