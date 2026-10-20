@@ -12,15 +12,15 @@ test('la vista AST muestra un árbol interactivo plegable', async ({ page }) => 
   await expect(page.locator('body')).toContainText('nodos');
 
   // Nodos como pastillas coloreadas por categoría.
-  await expect(page.getByText('Method', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('MethodDecl', { exact: true }).first()).toBeVisible();
 
-  // «Colapsar» oculta los nodos internos (Method queda dentro de Program plegado).
+  // «Colapsar» oculta los nodos internos (MethodDecl queda dentro de Program plegado).
   await page.getByRole('button', { name: 'Colapsar', exact: true }).click();
-  await expect(page.getByText('Method', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('MethodDecl', { exact: true })).toHaveCount(0);
 
   // «Expandir» los vuelve a mostrar.
   await page.getByRole('button', { name: 'Expandir', exact: true }).click();
-  await expect(page.getByText('Method', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('MethodDecl', { exact: true }).first()).toBeVisible();
 
   // El modo «Texto» conserva el volcado crudo de printAst.
   await page.getByRole('button', { name: 'Texto', exact: true }).click();

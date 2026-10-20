@@ -11,8 +11,6 @@
 //   - Step Into por sentencia C# (avanza hasta que cambia la línea, vía source map)
 //   - Línea de tiempo con reproducción (play/pausa, velocidad, scrubbing ←→)
 //
-// La ejecución NATIVA real (g++ -no-pie en Docker) sigue disponible como oráculo
-// en la pestaña x86; aquí todo ocurre en el cliente para visualizar el flujo.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play, Pause, StepForward, RotateCcw, ArrowDownToLine,
@@ -29,7 +27,7 @@ const REG_ORDER = [
 
 // Tope de snapshots pre-grabados para la línea de tiempo (memoria acotada). Los
 // programas del subconjunto académico terminan en muchísimos menos pasos; los
-// pesados se cortan aquí y se muestra el aviso (usar breakpoints / nativo).
+// pesados se cortan aquí y se muestra un aviso.
 const TIMELINE_CAP = 20_000;
 // A partir de este nº de pasos, la línea de tiempo se vuelve poco intuitiva y se
 // avisa al interactuar con ella (se recomienda usar puntos de interrupción).
@@ -238,9 +236,7 @@ export function SimulationView({
         {(capped || isStepLimit(snap)) && (
           <div className="mt-2 rounded-[8px] border border-warning/30 bg-warning/10 px-3 py-2 text-[11.5px] text-warning">
             Programa demasiado pesado para simular paso a paso (se alcanzó el tope de pasos).
-            Usa puntos de interrupción, o para benchmarks la ejecución nativa:{' '}
-            <span className="font-mono">Ejecutar (Docker)</span> en la pestaña x86, o corre el{' '}
-            <span className="font-mono">.s</span> en Linux/WSL.
+            Reduce las iteraciones o el tamaño del programa para explorar su ejecución.
           </div>
         )}
       </div>

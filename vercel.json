@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "dnf install -y libstdc++-static && npm --prefix typescript ci",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "typescript/packages/web/dist",
+  "functions": {
+    "api/compile.js": {
+      "includeFiles": "c++/build/vercel/compiler",
+      "maxDuration": 30
+    }
+  }
+}

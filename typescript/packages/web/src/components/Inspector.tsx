@@ -1,7 +1,7 @@
-import type { RunResult, WebResult } from '../lib/api';
+import type { WebResult } from '../lib/api';
 import { Card, Empty } from './primitives';
 import { AstView } from './views/AstView';
-import { AsmRunView } from './views/AsmRunView';
+import { AsmView } from './views/AsmView';
 import { ErrorsView } from './views/ErrorsView';
 import { OptimizationView } from './views/OptimizationView';
 import { SimulationView } from './views/SimulationView';
@@ -9,7 +9,7 @@ import { TokensView } from './views/TokensView';
 
 // IR and Symbols tabs were removed: the compiler CLI emits neither a
 // three-address IR nor a symbol-table dump (see compiler-types.ts). The x86 tab
-// shows the AT&T `.s` (+ optional native run in Docker); the Simulación tab runs
+// shows the AT&T `.s`; the Simulación tab runs
 // that same `.s` in the in-browser JavaScript simulator (registers/stack/…).
 export type TabId = 'tokens' | 'ast' | 'x86' | 'sim' | 'optimization' | 'errors';
 
@@ -26,9 +26,6 @@ export function Inspector({
   result,
   active,
   onTab,
-  run,
-  running,
-  onRun,
   hoverLine = null,
   onHoverAsm = () => {},
   onExecLine = () => {},
@@ -36,9 +33,6 @@ export function Inspector({
   result: WebResult;
   active: TabId;
   onTab: (t: TabId) => void;
-  run: RunResult | null;
-  running: boolean;
-  onRun: () => void;
   hoverLine?: number | null;
   onHoverAsm?: (line: number | null) => void;
   /** Reporta al editor la línea C# que ejecuta el simulador (auto-follow). */
@@ -78,12 +72,9 @@ export function Inspector({
         {active === 'ast' && <AstView ast={result.ast} />}
         {active === 'x86' &&
           (result.asm ? (
-            <AsmRunView
+            <AsmView
               asm={result.asm}
               metrics={result.metrics}
-              run={run}
-              running={running}
-              onRun={onRun}
               sourceMap={result.asmSourceMap}
               hoverLine={hoverLine}
               onHoverAsm={onHoverAsm}

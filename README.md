@@ -18,9 +18,9 @@ archivo .cs → Lexer manual → Parser descendente recursivo → AST con accept
 ```
 c++/src/     The compiler (Lab10-style). Build with `make` (g++, C++17).
 c++/legacy/  Previous IR → NASM/Intel → JSON pipeline, archived (not built).
-backend/     Node bridge (re-wired): POST /api/compile spawns `compiler --json` and
-typescript/  forwards the JSON; POST /api/run assembles + runs it in Docker. The React
-             studio renders tokens/AST/x86/simulación/optimización/errores.
+backend/    Local Node bridge and shared compilation handler.
+api/        Vercel function: POST /api/compile spawns `compiler --json`.
+typescript/ React studio: tokens/AST/x86/simulation/optimization/errors.
 ```
 
 > Note: this repo previously had an IR→NASM/Intel pipeline driving a React/Node web app.
@@ -33,18 +33,23 @@ typescript/  forwards the JSON; POST /api/run assembles + runs it in Docker. The
 - **g++** (C++17) to build the compiler. The emitted `.s` is **AT&T for Linux ELF**
   (`printf@PLT`, `-no-pie`), so it assembles natively on Linux/x86-64 but **not** on
   macOS/Apple Silicon.
-- **Node.js 18+** and **npm** for the backend bridge and the web studio.
-- **Docker** (with the `gcc:13` image) only for **native Linux execution** — the
-  x86 tab's *Ejecutar (Docker)* button and `POST /api/run` assemble + run inside a
-  Linux container. Viewing tokens/AST/assembly/simulation/optimization/errors
-  needs no Docker. (No LLVM/nasm/clang involved.)
+- **Node.js 24** and **npm** for the backend bridge and the web studio.
+- **Docker** is optional for the compiler CLI's Linux regression tests on macOS.
+  The web app uses only the browser simulator and requires no Docker.
+
+## Deploy to Vercel
+
+See [the deployment guide](docs/vercel.md) for project settings, preview checks
+and production deployment. Import the repository root, use Node.js 24, and keep
+`vercel.json` settings. Vercel builds the C++ compiler for Linux and serves
+`/api/compile` as a Node.js function; simulation runs in the browser.
 
 ## Build & run
 
 ```bash
 # 1) Build the C++ compiler (host binary)
 cd c++
-make                      # produces ./compiler
+make                      # produces ./build/compiler
 scripts/docker.sh test    # optional: full suite in Docker (gcc:13) — 25/25
 
 # 2) Start the backend bridge (port 8787)
@@ -61,30 +66,23 @@ npm run dev               # runs @cstudio/web; Vite proxies /api → :8787
 Then open <http://localhost:5173>. The web app sends your C# code to the backend,
 which runs `compiler --json` and returns **tokens, AST, x86-64 AT&T assembly
 (`--no-opt` + `--opt`), a C#↔x86 source map, the optimization report, and errors**.
-The studio has two execution paths:
-
-- **Run / Simulación**: runs the generated AT&T assembly in the browser with a
-  JavaScript x86-64 simulator, showing stdout plus CPU/register/stack state.
-- **Ejecutar (Docker)** in the x86 tab: assembles + runs the `.s` in Docker
-  (`gcc:13`) and shows the real native stdout in **Salida**.
+**Run / Simulación** opens the browser's JavaScript x86-64 debugger, initially
+paused. Press **Ejecutar** to run to the end and inspect stdout, registers and stack.
 
 There are no IR/Symbols tabs: the current Lab10-style CLI emits neither.
 
-Test the web with **Playwright** (required): `cd typescript/packages/web &&
-npx playwright test`. Test the simulator directly with `npm run test:sim -w
-@cstudio/web`. Build static files: `npm run build -w @cstudio/web` (output in
-`typescript/packages/web/dist`).
-
-> On macOS, after `scripts/docker.sh test` rebuilds `./compiler` for Linux, run
-> `cd c++ && make clean && make` again before starting the backend (it needs the host binary).
+From the repository root, run `npm run test:e2e` for Playwright,
+`npm run test:api` for the compilation API and fixture output comparisons,
+and `npm run test:sim` for simulator unit tests. Build with `npm run build`
+(output in `typescript/packages/web/dist`).
 
 ## Using the compiler directly (CLI)
 
 ```bash
 cd c++
-./compiler path/to/program.cs              # -> outputs/<name>.s (AT&T)   [--opt default]
-./compiler path/to/program.cs --no-opt --tokens --ast -o out.s
-./compiler --json < path/to/program.cs     # the JSON contract used by the backend
+./build/compiler path/to/program.cs              # -> outputs/<name>.s (AT&T)   [--opt default]
+./build/compiler path/to/program.cs --no-opt --tokens --ast -o out.s
+./build/compiler --json < path/to/program.cs     # the JSON contract used by the backend
 g++ -no-pie outputs/<name>.s -o prog && ./prog   # assemble + run (Linux/Docker)
 ```
 
@@ -97,6 +95,5 @@ for the web app.
 
 - This implements a **limited subset of C#** for an academic compilers course — not
   full C#. Limitations are documented honestly; no claim is made that it beats GCC/Clang.
-- Web execution has two modes: fast **Simulación** in-browser through the JS x86-64
-  simulator, and real native execution through backend `/api/run` inside Docker
-  (`gcc:13`). Use Docker output as the fidelity check for the Linux target.
+- Web execution uses the in-browser JavaScript x86-64 simulator. Native assembly
+  execution remains available through the compiler CLI on Linux or its Docker test scripts.

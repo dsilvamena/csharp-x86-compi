@@ -1,0 +1,14 @@
+{
+  "name": "csharp-x86-studio-deployment",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "build": "make -C c++ && npm --prefix typescript run build",
+    "build:vercel": "node scripts/build-vercel.mjs",
+    "typecheck": "npm --prefix typescript run typecheck",
+    "test:api": "make -C c++ && node --test backend/compiler.test.js",
+    "test:sim": "npm --prefix typescript run test:sim -w @cstudio/web",
+    "test:e2e": "make -C c++ && npm --prefix typescript run test:e2e -w @cstudio/web"
+  }
+}
